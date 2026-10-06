@@ -1,0 +1,668 @@
+{% extends 'catalogo/base.html' %}
+{% load static %}
+
+{% block title %}{{ contenido.catalogo_titulo }} | {{ contenido.marca }}{% endblock %}
+
+{% block content %}
+    <section class="catalogo-hero">
+        <div class="catalogo-hero-contenido">
+            <p class="etiqueta-seccion">Caro-Kahn | Catálogo técnico</p>
+            <h1>{{ contenido.lista_hero_titulo }}</h1>
+            <p>{{ contenido.lista_hero_descripcion|linebreaksbr }}</p>
+            <a href="#catalogo" class="cta-catalogo">Explorar catálogo técnico</a>
+        </div>
+    </section>
+
+    <section class="beneficios-catalogo" aria-label="Beneficios de comprar en Caro-Kahn">
+        <div class="contenedor grid-beneficios-catalogo">
+            <article class="beneficio-catalogo">
+                <span class="icono-beneficio">👷‍♂️</span>
+                <h2>Asesoría técnica</h2>
+                <p>Información clara para elegir la solución adecuada para cada trabajo.</p>
+            </article>
+            <article class="beneficio-catalogo">
+                <span class="icono-beneficio">📦</span>
+                <h2>Stock visible</h2>
+                <p>Consulta la disponibilidad de cada producto antes de comprar.</p>
+            </article>
+            <article class="beneficio-catalogo">
+                <span class="icono-beneficio">🚚</span>
+                <h2>Compra simple</h2>
+                <p>Agrega unidades al carrito o compra directamente desde el catálogo.</p>
+            </article>
+            <article class="beneficio-catalogo">
+                <span class="icono-beneficio">✅</span>
+                <h2>Calidad confiable</h2>
+                <p>Productos seleccionados para obra, mantenimiento y uso doméstico.</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="catalogo-seccion" class="contenedor catalogo-seccion" aria-labelledby="titulo-catalogo">
+        <div class="encabezado-catalogo">
+            <p class="etiqueta-seccion">{{ contenido.catalogo_etiqueta }}</p>
+            <h1 id="titulo-catalogo" class="titulo-pagina">{{ contenido.catalogo_titulo }}</h1>
+            <p class="bajada">{{ contenido.catalogo_descripcion }}</p>
+        </div>
+
+        <div class="filtros-rapidos" aria-labelledby="titulo-filtros">
+            <h2 id="titulo-filtros">Filtros rápidos</h2>
+            <div class="filtros-lista">
+                <a href="{% url 'lista' %}#catalogo">Todas</a>
+                {% for categoria in categorias %}
+                    <a href="{% url 'lista' %}?categoria={{ categoria|urlencode }}#catalogo">{{ categoria }}</a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="resumen-panel" aria-label="Resumen del catálogo">
+            <p>Total de productos: <strong>{{ total_registros }}</strong></p>
+            <p>Productos con stock disponible: <strong>{{ productos_con_stock }}</strong></p>
+        </div>
+
+        <section class="filtro-dinamico" aria-labelledby="titulo-filtro-dinamico">
+            <h2 id="titulo-filtro-dinamico">Filtrar catálogo</h2>
+            <div class="controles-filtro">
+                <label for="filtro-categoria">Categoría</label>
+                <select id="filtro-categoria" name="categoria">
+                    <option value="todas">Todas las categorías</option>
+                    {% for categoria in categorias %}
+                        <option value="{{ categoria }}"{% if categoria == categoria_seleccionada %} selected{% endif %}>{{ categoria }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filtro-precio">Precio máximo</label>
+                <input id="filtro-precio" type="number" min="0" step="100" placeholder="Sin límite">
+                <button id="limpiar-filtros" class="boton-secundario" type="button">Limpiar filtros</button>
+            </div>
+            <p id="resultado-filtro" class="resultado-filtro" aria-live="polite"></p>
+        </section>
+
+        <div id="catalogo" class="grid-productos">
+            {% for producto in productos %}
+                <article class="tarjeta-producto {% if producto.stock == 0 %}agotado{% endif %}" data-categoria="{{ producto.categoria|lower }}" data-precio="{{ producto.precio }}">
+                    <img class="imagen-producto"
+                         src="{% if producto.imagen_url %}{{ producto.imagen_url }}{% else %}{% static 'catalogo/img/logo-caro-kahn.jpg' %}{% endif %}"
+                         alt="Imagen de {{ producto.nombre }}"
+                         loading="lazy"
+                         onerror="this.onerror=null;this.src='{% static 'catalogo/img/logo-caro-kahn.jpg' %}';">
+                    <span class="categoria">{{ producto.categoria }}</span>
+                    <h2><a href="{% url 'detalle' producto.id %}">{{ producto.nombre }}</a></h2>
+                    {% if producto.descripcion %}<p class="descripcion-producto">{{ producto.descripcion|linebreaksbr }}</p>{% endif %}
+                    <p class="precio">${{ producto.precio|floatformat:0 }}</p>
+                    {% if producto.stock == 0 %}
+                        <p class="alerta-stock">Sin stock</p>
+                    {% else %}
+                        <p class="stock-disponible">Stock: {{ producto.stock }} unid.</p>
+                    {% endif %}
+                    <div class="acciones-producto">
+                        <div class="acciones-enlaces">
+                            <a class="boton-detalle" href="{% url 'detalle' producto.id %}">Ver detalle</a>
+                            {% if request.session.usuario_ficticio and producto.stock > 0 %}
+                                <form method="post" action="{% url 'comprar' producto.id %}">
+                                    {% csrf_token %}
+                                    <div class="control-compra control-compra-directa">
+                                        <input name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" aria-label="Cantidad para comprar {{ producto.nombre }}" required>
+                                        <button class="boton-comprar" type="submit">Comprar</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </div>
+                        {% if producto.stock > 0 %}
+                            <form method="post" action="{% url 'agregar_al_carrito' producto.id %}">
+                                {% csrf_token %}
+                                <label class="etiqueta-cantidad" for="cantidad-{{ producto.id }}">Cantidad</label>
+                                <div class="control-compra">
+                                    <input id="cantidad-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                    <button class="boton-secundario" type="submit">Añadir al carrito</button>
+                                </div>
+                            </form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% empty %}
+                <p class="mensaje-vacio" role="status">No hay productos disponibles.</p>
+            {% endfor %}
+        </div>
+        <p id="sin-resultados-filtro" class="mensaje-vacio" role="status" hidden>No hay productos que coincidan con los filtros seleccionados.</p>
+    </section>
+
+    <section class="testimonios-catalogo" aria-labelledby="titulo-testimonios">
+        <div class="contenedor">
+            <h2 id="titulo-testimonios">{{ contenido.lista_testimonios_titulo }}</h2>
+            <div class="grid-testimonios-catalogo">
+                <article class="testimonio-catalogo">
+                    <p>“{{ contenido.testimonio_1_texto|linebreaksbr }}”</p>
+                    <strong>{{ contenido.testimonio_1_autor }}</strong>
+                    <span>{{ contenido.testimonio_1_rol }}</span>
+                </article>
+                <article class="testimonio-catalogo">
+                    <p>“{{ contenido.testimonio_2_texto|linebreaksbr }}”</p>
+                    <strong>{{ contenido.testimonio_2_autor }}</strong>
+                    <span>{{ contenido.testimonio_2_rol }}</span>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-final-catalogo">
+        <div class="contenedor texto-centrado-catalogo">
+            <h2>{{ contenido.lista_cta_titulo }}</h2>
+            <p>{{ contenido.lista_cta_descripcion|linebreaksbr }}</p>
+            <a href="#catalogo" class="cta-catalogo">Seguir viendo el catálogo</a>
+        </div>
+    </section>
+
+    <style>
+        .catalogo-hero {
+            align-items: center;
+            background: linear-gradient(135deg, rgba(23, 28, 31, 0.98), rgba(52, 61, 66, 0.9));
+            color: var(--blanco);
+            display: flex;
+            justify-content: center;
+            min-height: 360px;
+            padding: 64px 20px;
+            text-align: center;
+        }
+
+        .catalogo-hero-contenido {
+            max-width: 760px;
+        }
+
+        .catalogo-hero h1 {
+            font-size: clamp(2rem, 5vw, 3.7rem);
+            line-height: 1.08;
+            margin: 0 0 20px;
+        }
+
+        .catalogo-hero p:not(.etiqueta-seccion) {
+            color: #dce3e6;
+            font-size: 1.08rem;
+            margin: 0 auto 28px;
+            max-width: 650px;
+        }
+
+        .cta-catalogo {
+            background: var(--acento);
+            border-radius: 6px;
+            color: #211900;
+            display: inline-block;
+            font-weight: 800;
+            padding: 13px 22px;
+        }
+
+        .cta-catalogo:hover,
+        .cta-catalogo:focus-visible {
+            background: var(--acento-oscuro);
+            color: var(--blanco);
+        }
+
+        .beneficios-catalogo {
+            background: var(--blanco);
+            padding: 44px 0;
+        }
+
+        .grid-beneficios-catalogo {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .beneficio-catalogo {
+            background: var(--fondo);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 24px 18px;
+            text-align: center;
+        }
+
+        .icono-beneficio {
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .beneficio-catalogo h2 {
+            color: var(--asfalto);
+            font-size: 1.05rem;
+            margin: 0 0 8px;
+        }
+
+        .beneficio-catalogo p {
+            color: var(--texto-suave);
+            font-size: 0.92rem;
+            margin: 0;
+        }
+
+        .catalogo-seccion {
+            padding-bottom: 20px;
+            padding-top: 56px;
+        }
+
+        .encabezado-catalogo {
+            text-align: center;
+        }
+
+        .encabezado-catalogo .bajada {
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 680px;
+        }
+
+        .testimonios-catalogo {
+            background: var(--blanco);
+            padding: 56px 0;
+        }
+
+        .testimonios-catalogo h2 {
+            color: var(--asfalto);
+            margin: 0 0 28px;
+            text-align: center;
+        }
+
+        .grid-testimonios-catalogo {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .testimonio-catalogo {
+            background: var(--fondo);
+            border-left: 4px solid var(--acento);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .testimonio-catalogo p {
+            color: var(--texto-suave);
+            font-style: italic;
+            margin: 0 0 16px;
+        }
+
+        .testimonio-catalogo strong,
+        .testimonio-catalogo span {
+            display: block;
+        }
+
+        .testimonio-catalogo strong { color: var(--asfalto); }
+        .testimonio-catalogo span { color: var(--texto-suave); font-size: 0.9rem; }
+
+        .cta-final-catalogo {
+            background: var(--asfalto);
+            color: var(--blanco);
+            padding: 56px 0;
+        }
+
+        .texto-centrado-catalogo { text-align: center; }
+
+        .cta-final-catalogo h2 {
+            font-size: clamp(1.6rem, 3vw, 2.4rem);
+            margin: 0 0 12px;
+        }
+
+        .cta-final-catalogo p {
+            color: #bac5ca;
+            margin: 0 0 24px;
+        }
+
+        /* Componentes del catálogo */
+        .visualmente-oculto {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .etiqueta-seccion {
+            color: var(--acento-oscuro);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            margin: 0 0 10px;
+            text-transform: uppercase;
+        }
+
+        .encabezado-catalogo {
+            margin-bottom: 28px;
+        }
+
+        .filtros-rapidos {
+            background: var(--asfalto-claro);
+            border-left: 5px solid var(--acento);
+            color: var(--blanco);
+            margin-bottom: 24px;
+            padding: 20px;
+        }
+
+        .filtros-rapidos h2 {
+            font-size: 1rem;
+            margin: 0 0 14px;
+        }
+
+        .filtros-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filtros-lista a {
+            border: 1px solid #879198;
+            border-radius: 999px;
+            color: var(--blanco);
+            font-size: 0.9rem;
+            padding: 7px 12px;
+        }
+
+        .filtros-lista a:hover,
+        .filtros-lista a:focus-visible {
+            background: var(--acento);
+            border-color: var(--acento);
+            color: #211900;
+            text-decoration: none;
+        }
+
+        .resumen-panel {
+            align-items: center;
+            background: var(--blanco);
+            border-left: 5px solid var(--acento);
+            box-shadow: var(--sombra);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding: 18px 20px;
+        }
+
+        .resumen-panel p {
+            margin: 0;
+        }
+
+        .filtro-dinamico {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            box-shadow: var(--sombra);
+            margin-bottom: 28px;
+            padding: 20px;
+        }
+
+        .filtro-dinamico h2 {
+            font-size: 1.1rem;
+            margin: 0 0 16px;
+        }
+
+        .controles-filtro {
+            align-items: end;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .controles-filtro label {
+            color: var(--texto-suave);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .controles-filtro select,
+        .controles-filtro input {
+            border: 1px solid var(--borde);
+            border-radius: 4px;
+            min-height: 42px;
+            padding: 8px 10px;
+        }
+
+        .boton-secundario {
+            background: var(--asfalto);
+            border: 0;
+            border-radius: 4px;
+            color: var(--blanco);
+            cursor: pointer;
+            min-height: 42px;
+            padding: 8px 14px;
+        }
+
+        .boton-secundario:hover,
+        .boton-secundario:focus-visible {
+            background: var(--asfalto-claro);
+        }
+
+        .resultado-filtro {
+            color: var(--texto-suave);
+            font-size: 0.9rem;
+            margin: 14px 0 0;
+        }
+
+        .grid-productos {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .tarjeta-producto {
+            background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+            border: 1px solid #c7d0d5;
+            border-radius: 8px;
+            box-shadow: 0 12px 26px rgba(37, 42, 46, 0.1);
+            display: flex;
+            flex-direction: column;
+            min-height: 470px;
+            overflow: hidden;
+            padding: 0 20px 20px;
+            position: relative;
+            transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .tarjeta-producto:hover {
+            border-color: var(--acento-oscuro);
+            box-shadow: 0 16px 32px rgba(37, 42, 46, 0.16);
+            transform: translateY(-3px);
+        }
+
+        .tarjeta-producto[hidden],
+        #sin-resultados-filtro[hidden] {
+            display: none !important;
+        }
+
+        .imagen-producto {
+            aspect-ratio: 16 / 10;
+            background: #dfe5e8;
+            border-bottom: 4px solid var(--acento);
+            border-radius: 0;
+            display: block;
+            margin: 0 -20px 18px;
+            object-fit: cover;
+            width: calc(100% + 40px);
+        }
+
+        .tarjeta-producto h2 {
+            font-size: 1.1rem;
+            line-height: 1.3;
+            margin: 12px 0 8px;
+        }
+
+        .tarjeta-producto h2 a {
+            color: var(--texto);
+        }
+
+        .tarjeta-producto h2 a:hover,
+        .tarjeta-producto h2 a:focus-visible {
+            color: var(--acento-oscuro);
+        }
+
+        .descripcion-producto {
+            color: var(--texto-suave);
+            font-size: 0.9rem;
+            line-height: 1.45;
+            margin: 0 0 12px;
+        }
+
+        .categoria {
+            align-self: flex-start;
+            background: #e5eaed;
+            border-radius: 3px;
+            color: var(--asfalto-claro);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 8px;
+        }
+
+        .precio {
+            color: var(--asfalto);
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin: 4px 0;
+        }
+
+        .stock-disponible,
+        .alerta-stock {
+            margin: 0 0 20px;
+        }
+
+        .stock-disponible {
+            color: var(--exito);
+        }
+
+        .alerta-stock {
+            color: var(--peligro);
+            font-weight: 800;
+        }
+
+        .agotado {
+            background: #fff1f0;
+            border-color: var(--peligro);
+        }
+
+        .boton-detalle {
+            margin-top: auto;
+        }
+
+        .acciones-producto {
+            display: grid;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .acciones-enlaces {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .acciones-enlaces form {
+            margin: 0;
+        }
+
+        .boton-comprar {
+            background: var(--acento);
+            border: 0;
+            border-radius: 4px;
+            color: #211900;
+            cursor: pointer;
+            font-weight: 800;
+            min-height: 42px;
+            padding: 10px 12px;
+            width: 100%;
+        }
+
+        .boton-comprar:hover,
+        .boton-comprar:focus-visible {
+            background: #ffc542;
+        }
+
+        .acciones-producto .boton-detalle {
+            margin-top: 0;
+        }
+
+        .acciones-producto form {
+            margin: 0;
+        }
+
+        .acciones-producto .boton-secundario {
+            width: 100%;
+        }
+
+        .mensaje-vacio {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            padding: 20px;
+        }
+
+        @media (max-width: 560px) {
+            .grid-beneficios-catalogo,
+            .grid-testimonios-catalogo {
+                grid-template-columns: 1fr;
+            }
+
+            .catalogo-hero {
+                min-height: 320px;
+                padding: 48px 16px;
+            }
+
+            .acciones-enlaces {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 561px) and (max-width: 900px) {
+            .grid-beneficios-catalogo {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+
+    <script>
+        (() => {
+            const tarjetas = [...document.querySelectorAll('.tarjeta-producto')];
+            const categoria = document.querySelector('#filtro-categoria');
+            const precio = document.querySelector('#filtro-precio');
+            const limpiar = document.querySelector('#limpiar-filtros');
+            const resultado = document.querySelector('#resultado-filtro');
+
+            function normalizarTexto(valor) {
+                return valor
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim()
+                    .toLowerCase();
+            }
+
+            function aplicarFiltros() {
+                const categoriaSeleccionada = normalizarTexto(categoria.value);
+                const precioMaximo = Number(precio.value);
+                const filtrarPorPrecio = precio.value.trim() !== '' && Number.isFinite(precioMaximo) && precioMaximo >= 0;
+                const sinResultados = document.querySelector('#sin-resultados-filtro');
+                let visibles = 0;
+
+                tarjetas.forEach((tarjeta) => {
+                    const categoriaProducto = normalizarTexto(tarjeta.dataset.categoria);
+                    const precioProducto = Number(tarjeta.dataset.precio);
+                    const coincideCategoria = categoriaSeleccionada === 'todas' || categoriaProducto === categoriaSeleccionada;
+                    const coincidePrecio = !filtrarPorPrecio || precioProducto <= precioMaximo;
+                    const mostrar = coincideCategoria && coincidePrecio;
+
+                    tarjeta.hidden = !mostrar;
+                    if (mostrar) {
+                        visibles += 1;
+                    }
+                });
+
+                sinResultados.hidden = visibles !== 0;
+                resultado.textContent = `${visibles} producto${visibles === 1 ? '' : 's'} visible${visibles === 1 ? '' : 's'}.`;
+            }
+
+            categoria.addEventListener('change', aplicarFiltros);
+            precio.addEventListener('input', aplicarFiltros);
+            limpiar.addEventListener('click', () => {
+                categoria.value = 'todas';
+                precio.value = '';
+                aplicarFiltros();
+            });
+            aplicarFiltros();
+        })();
+    </script>
+{% endblock %}

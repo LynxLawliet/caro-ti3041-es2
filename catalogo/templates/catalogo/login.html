@@ -1,0 +1,110 @@
+{% extends 'catalogo/base.html' %}
+
+{% block title %}Iniciar sesión | Ferretería Caro-Kahn{% endblock %}
+
+{% block content %}
+    <section class="contenedor pagina-formulario" aria-labelledby="titulo-login">
+        <p class="etiqueta-seccion">Acceso temporal</p>
+        <h1 id="titulo-login" class="titulo-pagina">{% if modo == 'registro' %}Crear una cuenta{% else %}Iniciar sesión{% endif %}</h1>
+        <p class="bajada">{% if modo == 'registro' %}Registra un nombre para guardar tu cotización temporal.{% else %}Accede a tu cotización temporal con tu nombre de usuario.{% endif %}</p>
+
+        <form class="formulario-sesion" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            <div class="encabezado-formulario">
+                <span class="icono-sesion" aria-hidden="true">●</span>
+                <div>
+                    <h2>{% if modo == 'registro' %}Registrarse / Crear cuenta{% else %}Iniciar sesión{% endif %}</h2>
+                    <p>Solo solicitamos un nombre para identificar tu reserva.</p>
+                </div>
+            </div>
+            <label for="usuario">Nombre de usuario</label>
+            <input id="usuario" name="usuario" type="text" maxlength="80" autocomplete="username" placeholder="Ej. ana.ingenieria" required autofocus>
+            <label for="contrasena">Contraseña temporal</label>
+            <input id="contrasena" name="contrasena" type="password" minlength="4" autocomplete="current-password" required>
+            {% if modo == 'registro' %}
+                <label for="confirmacion">Repetir contraseña</label>
+                <input id="confirmacion" name="confirmacion" type="password" minlength="4" autocomplete="new-password" required>
+            {% endif %}
+            <button class="boton-detalle boton-sesion" type="submit">{% if modo == 'registro' %}Crear cuenta{% else %}Iniciar sesión{% endif %}</button>
+        </form>
+        <p class="cambio-acceso">
+            {% if modo == 'registro' %}
+                ¿Ya tienes una cuenta? <a href="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Iniciar sesión</a>
+            {% else %}
+                ¿Aún no tienes cuenta? <a href="{% url 'registro' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Registrarse / Crear cuenta</a>
+            {% endif %}
+        </p>
+    </section>
+
+    <style>
+        .pagina-formulario {
+            max-width: 620px;
+        }
+
+        .formulario-sesion {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            box-shadow: var(--sombra);
+            display: grid;
+            gap: 10px;
+            margin-top: 28px;
+            padding: 24px;
+        }
+
+        .formulario-sesion label {
+            font-weight: 700;
+        }
+
+        .formulario-sesion input {
+            border: 1px solid var(--borde);
+            border-radius: 4px;
+            padding: 11px 12px;
+        }
+
+        .encabezado-formulario {
+            align-items: center;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 14px;
+            margin-bottom: 8px;
+            padding-bottom: 18px;
+        }
+
+        .encabezado-formulario h2,
+        .encabezado-formulario p {
+            margin: 0;
+        }
+
+        .encabezado-formulario h2 {
+            font-size: 1.15rem;
+        }
+
+        .encabezado-formulario p {
+            color: var(--texto-suave);
+            font-size: 0.9rem;
+        }
+
+        .icono-sesion {
+            align-items: center;
+            background: var(--acento);
+            border-radius: 50%;
+            color: var(--asfalto);
+            display: inline-flex;
+            height: 42px;
+            justify-content: center;
+            width: 42px;
+        }
+
+        .boton-sesion {
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .cambio-acceso {
+            color: var(--texto-suave);
+            margin: 18px 0 0;
+            text-align: center;
+        }
+    </style>
+{% endblock %}

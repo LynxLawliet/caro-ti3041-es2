@@ -1,0 +1,459 @@
+{% extends 'catalogo/base.html' %}
+
+{% block title %}Administración | {{ contenido.marca }}{% endblock %}
+
+{% block content %}
+    <section class="admin-shell" aria-labelledby="titulo-administracion">
+        <div class="admin-heading">
+            <p class="etiqueta-seccion">Área interna</p>
+            <h1 id="titulo-administracion">Panel de administración</h1>
+            <p class="bajada">Gestiona el stock, la visibilidad, la información de productos y los textos públicos de la Landingpage.</p>
+        </div>
+
+        {% if messages %}
+            <div class="mensajes" aria-live="polite">
+                {% for message in messages %}
+                    <p class="mensaje-admin {{ message.tags }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="admin-section" aria-labelledby="titulo-contenido">
+            <div class="admin-section-heading">
+                <div>
+                    <p class="etiqueta-seccion">Contenido público</p>
+                    <h2 id="titulo-contenido">Textos de la Landingpage</h2>
+                </div>
+                <span class="admin-badge">Se guarda en contenido.json</span>
+            </div>
+
+            <form method="post" class="admin-form">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="guardar_contenido">
+                <div class="admin-fields admin-fields-wide">
+                    <label>Marca visible
+                        <input name="marca" type="text" value="{{ contenido.marca }}" required>
+                    </label>
+                    <label>Etiqueta del Home
+                        <input name="home_etiqueta" type="text" value="{{ contenido.home_etiqueta }}" required>
+                    </label>
+                    <label class="campo-ancho">Título principal del Home
+                        <input name="home_titulo" type="text" value="{{ contenido.home_titulo }}" required>
+                    </label>
+                    <label class="campo-ancho">Descripción principal del Home
+                        <textarea name="home_descripcion" rows="3" required>{{ contenido.home_descripcion }}</textarea>
+                    </label>
+                    <label>Texto del botón principal
+                        <input name="home_cta" type="text" value="{{ contenido.home_cta }}" required>
+                    </label>
+                    <label>Etiqueta del catálogo
+                        <input name="catalogo_etiqueta" type="text" value="{{ contenido.catalogo_etiqueta }}" required>
+                    </label>
+                    <label>Título del catálogo
+                        <input name="catalogo_titulo" type="text" value="{{ contenido.catalogo_titulo }}" required>
+                    </label>
+                    <label>Descripción del catálogo
+                        <textarea name="catalogo_descripcion" rows="3" required>{{ contenido.catalogo_descripcion }}</textarea>
+                    </label>
+                    <label class="campo-ancho">Descripción del pie de página
+                        <textarea name="footer_descripcion" rows="3" required>{{ contenido.footer_descripcion }}</textarea>
+                    </label>
+                    <label>Etiqueta de beneficios
+                        <input name="home_beneficios_etiqueta" type="text" value="{{ contenido.home_beneficios_etiqueta }}" required>
+                    </label>
+                    <label>Título de beneficios
+                        <input name="home_beneficios_titulo" type="text" value="{{ contenido.home_beneficios_titulo }}" required>
+                    </label>
+                    {% for numero in "123" %}
+                        <label>Título del beneficio {{ numero }}
+                            <input name="beneficio_{{ numero }}_titulo" type="text" value="{% if numero == '1' %}{{ contenido.beneficio_1_titulo }}{% elif numero == '2' %}{{ contenido.beneficio_2_titulo }}{% else %}{{ contenido.beneficio_3_titulo }}{% endif %}" required>
+                        </label>
+                        <label>Descripción del beneficio {{ numero }}
+                            <textarea name="beneficio_{{ numero }}_descripcion" rows="2" required>{% if numero == '1' %}{{ contenido.beneficio_1_descripcion }}{% elif numero == '2' %}{{ contenido.beneficio_2_descripcion }}{% else %}{{ contenido.beneficio_3_descripcion }}{% endif %}</textarea>
+                        </label>
+                    {% endfor %}
+                    <label>Etiqueta del CTA del Home
+                        <input name="home_cta_etiqueta" type="text" value="{{ contenido.home_cta_etiqueta }}" required>
+                    </label>
+                    <label>Título del CTA del Home
+                        <input name="home_cta_titulo" type="text" value="{{ contenido.home_cta_titulo }}" required>
+                    </label>
+                    <label>Hero del catálogo
+                        <input name="lista_hero_titulo" type="text" value="{{ contenido.lista_hero_titulo }}" required>
+                    </label>
+                    <label>Descripción del hero del catálogo
+                        <textarea name="lista_hero_descripcion" rows="2" required>{{ contenido.lista_hero_descripcion }}</textarea>
+                    </label>
+                    <label>Título de testimonios
+                        <input name="lista_testimonios_titulo" type="text" value="{{ contenido.lista_testimonios_titulo }}" required>
+                    </label>
+                    <label>Texto del testimonio 1
+                        <textarea name="testimonio_1_texto" rows="2" required>{{ contenido.testimonio_1_texto }}</textarea>
+                    </label>
+                    <label>Autor del testimonio 1
+                        <input name="testimonio_1_autor" type="text" value="{{ contenido.testimonio_1_autor }}" required>
+                    </label>
+                    <label>Rol del testimonio 1
+                        <input name="testimonio_1_rol" type="text" value="{{ contenido.testimonio_1_rol }}" required>
+                    </label>
+                    <label>Texto del testimonio 2
+                        <textarea name="testimonio_2_texto" rows="2" required>{{ contenido.testimonio_2_texto }}</textarea>
+                    </label>
+                    <label>Autor del testimonio 2
+                        <input name="testimonio_2_autor" type="text" value="{{ contenido.testimonio_2_autor }}" required>
+                    </label>
+                    <label>Rol del testimonio 2
+                        <input name="testimonio_2_rol" type="text" value="{{ contenido.testimonio_2_rol }}" required>
+                    </label>
+                    <label>Título del CTA del catálogo
+                        <input name="lista_cta_titulo" type="text" value="{{ contenido.lista_cta_titulo }}" required>
+                    </label>
+                    <label>Descripción del CTA del catálogo
+                        <textarea name="lista_cta_descripcion" rows="2" required>{{ contenido.lista_cta_descripcion }}</textarea>
+                    </label>
+                </div>
+                <button class="boton-detalle" type="submit">Guardar textos visibles</button>
+            </form>
+        </section>
+
+        <section class="admin-section" aria-labelledby="titulo-productos">
+            <div class="admin-section-heading">
+                <div>
+                    <p class="etiqueta-seccion">Catálogo</p>
+                    <h2 id="titulo-productos">Productos y visibilidad</h2>
+                </div>
+                <span class="admin-badge">{{ productos|length }} productos</span>
+            </div>
+
+            <div class="nuevo-producto-panel">
+                <div>
+                    <p class="etiqueta-seccion">Nuevo registro</p>
+                    <h3>Añadir producto</h3>
+                    <p class="texto-admin-suave">Completa los datos básicos para incorporarlo al catálogo.</p>
+                </div>
+                <form method="post" class="admin-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="crear_producto">
+                    <div class="admin-fields">
+                        <label>Nombre
+                            <input name="nombre" type="text" required>
+                        </label>
+                        <label>Categoría
+                            <input name="categoria" type="text" required>
+                        </label>
+                        <label>Precio
+                            <input name="precio" type="number" min="0" step="1" required>
+                        </label>
+                        <label>Stock inicial
+                            <input name="stock" type="number" min="0" step="1" value="0" required>
+                        </label>
+                        <label>Imagen URL
+                            <input name="imagen_url" type="url">
+                        </label>
+                        <label class="campo-ancho">Descripción
+                            <textarea name="descripcion" rows="3"></textarea>
+                        </label>
+                    </div>
+                    <div class="producto-admin-actions">
+                        <label class="check-visible">
+                            <input name="visible" type="checkbox" checked>
+                            Mostrar producto en la tienda
+                        </label>
+                        <button class="boton-detalle" type="submit">Añadir producto</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="productos-admin">
+                {% for producto in productos %}
+                    <article class="producto-admin {% if not producto.visible %}producto-oculto{% endif %}">
+                        <div class="producto-admin-header">
+                            <div>
+                                <span class="producto-id">ID {{ producto.id }}</span>
+                                <h3>{{ producto.nombre }}</h3>
+                            </div>
+                            <span class="estado-visibilidad">{% if producto.visible %}Visible{% else %}Oculto{% endif %}</span>
+                        </div>
+
+                        <form method="post" class="admin-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="accion" value="guardar_producto">
+                            <input type="hidden" name="producto_id" value="{{ producto.id }}">
+                            <div class="admin-fields">
+                                <label>Nombre
+                                    <input name="nombre" type="text" value="{{ producto.nombre }}" required>
+                                </label>
+                                <label>Categoría
+                                    <input name="categoria" type="text" value="{{ producto.categoria }}" required>
+                                </label>
+                                <label>Stock
+                                    <input name="stock" type="number" min="0" step="1" value="{{ producto.stock }}" required>
+                                </label>
+                                <label>Precio
+                                    <input name="precio" type="number" min="0" step="1" value="{{ producto.precio }}" required>
+                                </label>
+                                <label>Imagen URL
+                                    <input name="imagen_url" type="url" value="{{ producto.imagen_url }}">
+                                </label>
+                                <label class="campo-ancho">Descripción
+                                    <textarea name="descripcion" rows="3" placeholder="Descripción visible del producto">{{ producto.descripcion }}</textarea>
+                                </label>
+                            </div>
+                            <div class="producto-admin-actions">
+                                <label class="check-visible">
+                                    <input name="visible" type="checkbox" {% if producto.visible %}checked{% endif %}>
+                                    Mostrar producto en la tienda
+                                </label>
+                                <div class="acciones-admin-producto">
+                                    <button class="boton-detalle" type="submit">Guardar producto</button>
+                                    <button class="boton-eliminar" type="submit" name="accion" value="eliminar_producto" formnovalidate onclick="return confirm('¿Eliminar este producto del catálogo?');">Eliminar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+
+    <style>
+        .admin-shell {
+            margin: 0 auto;
+            max-width: 1180px;
+            padding: 12px 16px 40px;
+        }
+
+        .admin-heading {
+            margin-bottom: 28px;
+        }
+
+        .admin-heading h1 {
+            margin: 0 0 8px;
+        }
+
+        .admin-section {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            box-shadow: var(--sombra-suave);
+            margin-top: 24px;
+            padding: 26px;
+        }
+
+        .admin-section-heading {
+            align-items: start;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 16px;
+            justify-content: space-between;
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+        }
+
+        .admin-section-heading h2 {
+            margin: 0;
+        }
+
+        .admin-badge,
+        .producto-id,
+        .estado-visibilidad {
+            background: #e9eef0;
+            border-radius: 999px;
+            color: var(--asfalto-claro);
+            font-size: 0.8rem;
+            font-weight: 800;
+            padding: 6px 10px;
+            white-space: nowrap;
+        }
+
+        .admin-form {
+            display: grid;
+            gap: 18px;
+        }
+
+        .admin-fields {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .admin-fields-wide {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .admin-fields label {
+            color: var(--texto);
+            display: grid;
+            font-size: 0.9rem;
+            font-weight: 700;
+            gap: 7px;
+        }
+
+        .admin-fields input,
+        .admin-fields textarea {
+            border: 1px solid var(--borde);
+            border-radius: 6px;
+            color: var(--texto);
+            min-width: 0;
+            padding: 10px 12px;
+            resize: vertical;
+        }
+
+        .admin-fields input:focus,
+        .admin-fields textarea:focus {
+            border-color: var(--acento-oscuro);
+            outline: 2px solid rgba(245, 169, 0, 0.2);
+        }
+
+        .campo-ancho {
+            grid-column: 1 / -1;
+        }
+
+        .productos-admin {
+            display: grid;
+            gap: 18px;
+        }
+
+        .nuevo-producto-panel {
+            background: #f7f9fa;
+            border: 1px solid var(--borde);
+            border-radius: 8px;
+            margin-bottom: 24px;
+            padding: 20px;
+        }
+
+        .nuevo-producto-panel h3 {
+            margin: 0 0 4px;
+        }
+
+        .texto-admin-suave {
+            color: var(--texto-suave);
+            margin: 0 0 18px;
+        }
+
+        .producto-admin {
+            border: 1px solid var(--borde);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .producto-admin.producto-oculto {
+            background: #faf6f2;
+            border-color: #d8c2ae;
+        }
+
+        .producto-admin-header {
+            align-items: center;
+            display: flex;
+            gap: 14px;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .producto-admin-header h3 {
+            margin: 8px 0 0;
+        }
+
+        .estado-visibilidad {
+            background: #e6f5ed;
+            color: var(--exito);
+        }
+
+        .producto-oculto .estado-visibilidad {
+            background: #fce8e6;
+            color: var(--peligro);
+        }
+
+        .producto-admin-actions {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: space-between;
+        }
+
+        .acciones-admin-producto {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .boton-eliminar {
+            background: #b42318;
+            border: 0;
+            border-radius: 6px;
+            color: var(--blanco);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 800;
+            padding: 0.72rem 1.1rem;
+        }
+
+        .boton-eliminar:hover,
+        .boton-eliminar:focus-visible {
+            background: #8f1c14;
+        }
+
+        .check-visible {
+            align-items: center;
+            color: var(--texto-suave);
+            display: flex;
+            gap: 8px;
+            font-weight: 700;
+        }
+
+        .check-visible input {
+            accent-color: var(--acento-oscuro);
+            height: 18px;
+            width: 18px;
+        }
+
+        .mensaje-admin {
+            background: #e6f5ed;
+            border-left: 4px solid var(--exito);
+            color: var(--exito);
+            margin: 0 0 18px;
+            padding: 12px;
+        }
+
+        .mensaje-admin.error {
+            background: #fce8e6;
+            border-color: var(--peligro);
+            color: var(--peligro);
+        }
+
+        @media (max-width: 700px) {
+            .admin-section {
+                padding: 18px;
+            }
+
+            .admin-section-heading,
+            .producto-admin-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .admin-fields,
+            .admin-fields-wide {
+                grid-template-columns: 1fr;
+            }
+
+            .campo-ancho {
+                grid-column: auto;
+            }
+
+            .producto-admin-actions .boton-detalle {
+                width: 100%;
+            }
+
+            .acciones-admin-producto {
+                width: 100%;
+            }
+
+            .acciones-admin-producto .boton-eliminar {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}

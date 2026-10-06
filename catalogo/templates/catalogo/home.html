@@ -1,0 +1,395 @@
+{% extends 'catalogo/base.html' %}
+{% load static %}
+
+{% block title %}{{ contenido.marca }} | Soluciones para proyectos{% endblock %}
+
+{% block content %}
+    <section class="hero">
+        <div class="contenedor hero-grid">
+            <div class="hero-contenido">
+                <p class="etiqueta-seccion">{{ contenido.home_etiqueta }}</p>
+                <h1 class="titulo-pagina" style="margin-bottom: 16px; color: var(--blanco);">{{ contenido.home_titulo }}</h1>
+                <p class="bajada hero-texto">{{ contenido.home_descripcion|linebreaksbr }}</p>
+                <div class="hero-acciones">
+                    <a class="boton-detalle" href="{% url 'lista' %}">{{ contenido.home_cta }}</a>
+                    <a class="boton-secundario-home" href="{% url 'carrito' %}">Ver carrito</a>
+                </div>
+                <div class="hero-estadisticas" aria-label="Estadísticas clave">
+                    <div>
+                        <strong>{{ total_productos }}</strong>
+                        <span>Productos</span>
+                    </div>
+                    <div>
+                        <strong>{{ categorias|length }}</strong>
+                        <span>Categorías</span>
+                    </div>
+                    <div>
+                        <strong>24/7</strong>
+                        <span>Soporte digital</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-panel" aria-label="Productos destacados">
+                <div class="panel-badge">Productos destacados</div>
+                {% for producto in productos_destacados %}
+                    <div class="mini-producto">
+                        <img src="{% if producto.imagen_url %}{{ producto.imagen_url }}{% else %}{% static 'catalogo/img/logo-caro-kahn.jpg' %}{% endif %}" alt="{{ producto.nombre }}" loading="lazy" onerror="this.onerror=null;this.src='{% static 'catalogo/img/logo-caro-kahn.jpg' %}';">
+                        <div>
+                            <h2>{{ producto.nombre }}</h2>
+                            <p>${{ producto.precio|floatformat:0 }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="contenedor seccion">
+        <div class="encabezado-seccion">
+            <p class="etiqueta-seccion">Categorias principales</p>
+            <h2>Nuestros principales rubros</h2>
+        </div>
+
+        <div class="grilla-categorias">
+            {% for categoria in categorias %}
+                <a class="categoria-card" href="{% url 'lista' %}?categoria={{ categoria|urlencode }}#catalogo">
+                    <span class="emoji-categoria">🔧</span>
+                    <strong>{{ categoria }}</strong>
+                    <small>Ver productos</small>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="contenedor seccion seccion-blanca">
+        <div class="encabezado-seccion">
+            <p class="etiqueta-seccion">{{ contenido.home_beneficios_etiqueta }}</p>
+            <h2>{{ contenido.home_beneficios_titulo }}</h2>
+        </div>
+
+        <div class="beneficios-grid">
+            <article class="beneficio">
+                <span>📦</span>
+                <h3>{{ contenido.beneficio_1_titulo }}</h3>
+                <p>{{ contenido.beneficio_1_descripcion|linebreaksbr }}</p>
+            </article>
+            <article class="beneficio">
+                <span>🛠️</span>
+                <h3>{{ contenido.beneficio_2_titulo }}</h3>
+                <p>{{ contenido.beneficio_2_descripcion|linebreaksbr }}</p>
+            </article>
+            <article class="beneficio">
+                <span>🚚</span>
+                <h3>{{ contenido.beneficio_3_titulo }}</h3>
+                <p>{{ contenido.beneficio_3_descripcion|linebreaksbr }}</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="contenedor seccion cta-section">
+        <div>
+            <p class="etiqueta-seccion">{{ contenido.home_cta_etiqueta }}</p>
+            <h2>{{ contenido.home_cta_titulo }}</h2>
+        </div>
+        <a class="boton-detalle" href="{% url 'lista' %}">Ir al catálogo</a>
+    </section>
+
+    <style>
+        .hero {
+            background: linear-gradient(135deg, #12181c 0%, #1c2327 32%, #2c353b 100%);
+            color: var(--blanco);
+            padding: clamp(4rem, 8vw, 7rem) 0 clamp(2.5rem, 5vw, 4rem);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(245,169,0,0.18), transparent 32%);
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            align-items: center;
+            display: grid;
+            gap: 24px;
+            grid-template-columns: 1.2fr 0.8fr;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-contenido {
+            max-width: 640px;
+        }
+
+        .hero .titulo-pagina {
+            margin-bottom: 12px;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-texto {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 1rem;
+            margin-bottom: 24px;
+            max-width: 560px;
+            line-height: 1.6;
+        }
+
+        .hero-acciones {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 16px;
+            margin-bottom: 22px;
+        }
+
+        .boton-secundario-home {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            color: var(--blanco);
+            display: inline-block;
+            font-weight: 700;
+            padding: 12px 18px;
+        }
+
+        .boton-secundario-home:hover,
+        .boton-secundario-home:focus-visible {
+            background: rgba(255, 255, 255, 0.08);
+            text-decoration: none;
+        }
+
+        .hero-estadisticas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px 24px;
+            margin-top: 8px;
+        }
+
+        .hero-estadisticas div {
+            display: grid;
+            gap: 4px;
+        }
+
+        .hero-estadisticas strong {
+            color: var(--acento);
+            font-size: 1.6rem;
+        }
+
+        .hero-estadisticas span {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.82rem;
+        }
+
+        .hero-panel {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radio);
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+            padding: clamp(1rem, 3vw, 1.5rem);
+            backdrop-filter: blur(3px);
+        }
+
+        .panel-badge {
+            background: rgba(245, 169, 0, 0.14);
+            border: 1px solid rgba(245, 169, 0, 0.4);
+            border-radius: 999px;
+            color: var(--acento);
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 18px;
+            padding: 7px 10px;
+            text-transform: uppercase;
+        }
+
+        .mini-producto {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 82px 1fr;
+            margin-bottom: 14px;
+            padding: 10px;
+        }
+
+        .mini-producto:last-child {
+            margin-bottom: 0;
+        }
+
+        .mini-producto:hover {
+            background: rgba(255, 255, 255, 0.09);
+            transform: translateX(4px);
+        }
+
+        .mini-producto img {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .mini-producto h2 {
+            font-size: 0.96rem;
+            margin: 0 0 6px;
+        }
+
+        .mini-producto p {
+            color: var(--acento);
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .seccion {
+            width: min(1200px, calc(100% - 32px));
+            margin-left: auto;
+            margin-right: auto;
+            padding-top: 44px;
+        }
+
+        .encabezado-seccion {
+            margin-bottom: 20px;
+        }
+
+        .encabezado-seccion h2 {
+            margin: 0;
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            line-height: 1.2;
+        }
+
+        .grilla-categorias {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .categoria-card {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            box-shadow: var(--sombra-suave);
+            display: block;
+            padding: 22px 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .categoria-card:hover,
+        .categoria-card:focus-visible {
+            transform: translateY(-3px);
+            box-shadow: var(--sombra-fuerte);
+            text-decoration: none;
+        }
+
+        .categoria-card strong {
+            color: var(--texto);
+            display: block;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+        }
+
+        .categoria-card small {
+            color: var(--texto-suave);
+        }
+
+        .emoji-categoria {
+            display: inline-block;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .seccion-blanca {
+            background: #fff;
+            margin: 24px auto 0;
+            padding-bottom: 44px;
+        }
+
+        .seccion-blanca .encabezado-seccion,
+        .seccion-blanca .beneficios-grid {
+            width: 100%;
+        }
+
+        .beneficios-grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            align-items: stretch;
+        }
+
+        .beneficio {
+            background: var(--fondo);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .categoria-card,
+        .beneficio {
+            transition: transform var(--transicion), box-shadow var(--transicion), border-color var(--transicion);
+        }
+
+        .categoria-card:hover,
+        .beneficio:hover {
+            border-color: rgba(214, 146, 0, 0.55);
+        }
+
+        .beneficio span {
+            font-size: 2rem;
+        }
+
+        .beneficio h3 {
+            margin: 14px 0 10px;
+        }
+
+        .beneficio p {
+            margin: 0;
+            color: var(--texto-suave);
+        }
+
+        .cta-section {
+            align-items: center;
+            background: linear-gradient(135deg, #f6c86b, #f5a900);
+            border-radius: 20px;
+            color: #211900;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 12px auto 40px;
+            padding: 22px 24px;
+        }
+
+        .cta-section h2 {
+            margin: 0;
+            font-size: clamp(1.3rem, 2.3vw, 1.9rem);
+            line-height: 1.2;
+        }
+
+        @media (max-width: 880px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .seccion {
+                width: calc(100% - 28px);
+            }
+
+            .seccion-blanca {
+                padding-bottom: 32px;
+            }
+        }
+    </style>
+{% endblock %}

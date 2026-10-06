@@ -1,0 +1,91 @@
+{% extends 'catalogo/base.html' %}
+
+{% block title %}Pedido confirmado | Ferretería Caro-Kahn{% endblock %}
+
+{% block content %}
+    <section class="contenedor confirmacion-pedido" aria-labelledby="titulo-pedido">
+        <div class="marca-confirmacion" aria-hidden="true">OK</div>
+        <p class="etiqueta-seccion">Reserva temporal</p>
+        <h1 id="titulo-pedido" class="titulo-pagina">Pedido confirmado</h1>
+        <p class="bajada">Hola, {{ request.session.usuario_ficticio }}. El producto fue reservado en tu sesión para esta simulación.</p>
+
+        {% if items_carrito %}
+            <div class="resumen-pedido">
+                {% for item in items_carrito %}
+                    <div class="linea-pedido">
+                        <span>{{ item.nombre }} x {{ item.cantidad }}</span>
+                        <strong>${{ item.subtotal|floatformat:0 }}</strong>
+                    </div>
+                {% endfor %}
+                <div class="total-pedido">
+                    <span>Total de la cotización</span>
+                    <strong>${{ total_carrito|floatformat:0 }}</strong>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="acciones-confirmacion">
+            <a class="boton-detalle" href="{% url 'lista' %}">Volver al catálogo</a>
+            <a class="boton-secundario" href="{% url 'carrito' %}">Ver carrito</a>
+        </div>
+    </section>
+
+    <style>
+        .confirmacion-pedido {
+            max-width: 760px;
+            text-align: center;
+        }
+
+        .marca-confirmacion {
+            align-items: center;
+            background: var(--exito);
+            border-radius: 50%;
+            color: var(--blanco);
+            display: flex;
+            font-size: 1.1rem;
+            font-weight: 800;
+            height: 64px;
+            justify-content: center;
+            margin: 0 auto 18px;
+            width: 64px;
+        }
+
+        .resumen-pedido {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            box-shadow: var(--sombra);
+            margin: 28px auto;
+            max-width: 620px;
+            padding: 8px 20px;
+            text-align: left;
+        }
+
+        .linea-pedido,
+        .total-pedido {
+            align-items: center;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            padding: 16px 0;
+        }
+
+        .total-pedido {
+            border-bottom: 0;
+            color: var(--asfalto);
+            font-size: 1.15rem;
+        }
+
+        .acciones-confirmacion {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        @media (max-width: 520px) {
+            .acciones-confirmacion {
+                flex-direction: column;
+            }
+        }
+    </style>
+{% endblock %}

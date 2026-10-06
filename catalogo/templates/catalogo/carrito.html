@@ -1,0 +1,350 @@
+{% extends 'catalogo/base.html' %}
+
+{% block title %}Carrito | Ferretería Caro-Kahn{% endblock %}
+
+{% block content %}
+    <section class="contenedor pagina-simple" aria-labelledby="titulo-carrito">
+        <p class="etiqueta-seccion">Cotización temporal</p>
+        <h1 id="titulo-carrito" class="titulo-pagina">Carrito de compras</h1>
+
+        {% if items_carrito %}
+            <div class="carrito-resumen">
+                <div>
+                    <p class="etiqueta-seccion">Resumen</p>
+                    <h2>{{ items_carrito|length }} producto{{ items_carrito|length|pluralize }} en tu carrito</h2>
+                </div>
+                <div class="total-carrito">
+                    <span>Total</span>
+                    <strong>${{ total_carrito|floatformat:0 }}</strong>
+                </div>
+            </div>
+
+            <div class="tabla-carrito">
+                {% for item in items_carrito %}
+                    <article class="fila-carrito">
+                        <div class="info-carrito">
+                            <span class="badge-producto">En cotización</span>
+                            <h2>{{ item.nombre }}</h2>
+                            <p>{{ item.cantidad }} unidad{{ item.cantidad|pluralize }} x ${{ item.precio|floatformat:0 }}</p>
+                        </div>
+
+                        <div class="controles-carrito">
+                            <strong class="subtotal-item">Subtotal: ${{ item.subtotal|floatformat:0 }}</strong>
+
+                            <form method="post" action="{% url 'actualizar_cantidad_carrito' item.id %}" class="form-cantidad-carrito">
+                                {% csrf_token %}
+                                <div class="selector-cantidad" aria-label="Control de cantidad para {{ item.nombre }}">
+                                    <button class="btn-cantidad btn-menos" type="button" data-action="decrement" data-input-id="cantidad-carrito-{{ item.id }}" aria-label="Restar una unidad">−</button>
+                                    <input id="cantidad-carrito-{{ item.id }}" name="cantidad" type="number" min="0" value="{{ item.cantidad }}" required>
+                                    <button class="btn-cantidad btn-mas" type="button" data-action="increment" data-input-id="cantidad-carrito-{{ item.id }}" aria-label="Sumar una unidad">+</button>
+                                </div>
+                                <button class="boton-secundario" type="submit">Actualizar</button>
+                            </form>
+
+                            <form method="post" action="{% url 'eliminar_del_carrito' item.id %}">
+                                {% csrf_token %}
+                                <button class="boton-eliminar" type="submit">Eliminar</button>
+                            </form>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <div class="acciones-carrito">
+                <form method="post" action="{% url 'vaciar_carrito' %}">
+                    {% csrf_token %}
+                    <button class="boton-secundario boton-vaciar" type="submit">Vaciar carrito</button>
+                </form>
+                <a class="boton-detalle" href="{% url 'checkout' %}">Finalizar compra</a>
+            </div>
+        {% else %}
+            <div class="carrito-vacio">
+                <p class="mensaje-vacio">Tu carrito está vacío.</p>
+                <a class="boton-detalle" href="{% url 'lista' %}">Volver al catálogo</a>
+            </div>
+        {% endif %}
+    </section>
+
+    <style>
+        .pagina-simple {
+            max-width: 920px;
+        }
+
+        .carrito-resumen {
+            align-items: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7f8 100%);
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+            box-shadow: var(--sombra);
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+            padding: 20px 22px;
+        }
+
+        .carrito-resumen h2 {
+            font-size: 1.15rem;
+            margin: 4px 0 0;
+        }
+
+        .tabla-carrito {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+            box-shadow: var(--sombra);
+            overflow: hidden;
+        }
+
+        .fila-carrito {
+            align-items: center;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            padding: 18px 20px;
+        }
+
+        .info-carrito {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .badge-producto {
+            background: rgba(245, 169, 0, 0.12);
+            border: 1px solid rgba(245, 169, 0, 0.4);
+            border-radius: 999px;
+            color: var(--acento-oscuro);
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            text-transform: uppercase;
+        }
+
+        .controles-carrito {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .subtotal-item {
+            color: var(--texto);
+            min-width: 140px;
+            text-align: right;
+        }
+
+        .form-cantidad-carrito {
+            align-items: center;
+            display: flex;
+            gap: 10px;
+        }
+
+        .selector-cantidad {
+            align-items: center;
+            display: inline-flex;
+            gap: 6px;
+        }
+
+        .btn-cantidad {
+            background: #f4f6f7;
+            border: 1px solid var(--borde);
+            border-radius: 8px;
+            color: var(--texto);
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1;
+            min-width: 34px;
+            padding: 8px 10px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-cantidad:hover,
+        .btn-cantidad:focus-visible {
+            background: var(--acento);
+            border-color: var(--acento);
+            color: #211900;
+        }
+
+        .form-cantidad-carrito input {
+            background: #ffffff;
+            border: 1px solid var(--borde);
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 8px 10px;
+            text-align: center;
+            width: 72px;
+        }
+
+        .boton-secundario,
+        .boton-detalle,
+        .boton-eliminar {
+            border-radius: 8px;
+            font-weight: 700;
+            min-height: 42px;
+            padding: 9px 14px;
+        }
+
+        .boton-secundario {
+            background: var(--asfalto);
+            border: 0;
+            color: var(--blanco);
+            cursor: pointer;
+        }
+
+        .boton-secundario:hover,
+        .boton-secundario:focus-visible {
+            background: var(--asfalto-claro);
+            text-decoration: none;
+        }
+
+        .boton-vaciar {
+            background: transparent;
+            border: 1px solid var(--borde);
+            color: var(--texto);
+        }
+
+        .boton-vaciar:hover,
+        .boton-vaciar:focus-visible {
+            background: #edf1f3;
+        }
+
+        .boton-detalle {
+            background: var(--acento);
+            border: 0;
+            color: #211900;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .boton-detalle:hover,
+        .boton-detalle:focus-visible {
+            background: #ffc542;
+            text-decoration: none;
+        }
+
+        .boton-eliminar {
+            background: transparent;
+            border: 1px solid var(--peligro);
+            color: var(--peligro);
+            cursor: pointer;
+        }
+
+        .boton-eliminar:hover,
+        .boton-eliminar:focus-visible {
+            background: var(--peligro);
+            color: var(--blanco);
+        }
+
+        .total-carrito {
+            align-items: end;
+            color: var(--texto);
+            display: grid;
+            gap: 4px;
+            justify-items: end;
+            line-height: 1.2;
+        }
+
+        .total-carrito span {
+            color: var(--texto-suave);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .total-carrito strong {
+            color: var(--texto);
+            font-size: clamp(1.5rem, 2vw, 2rem);
+        }
+
+        .acciones-carrito {
+            align-items: center;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .acciones-carrito form {
+            margin: 0;
+        }
+
+        .carrito-vacio {
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+            box-shadow: var(--sombra);
+            padding: 32px 20px;
+            text-align: center;
+        }
+
+        .mensaje-vacio {
+            font-size: 1.1rem;
+            margin: 0 0 18px;
+        }
+
+        .fila-carrito:last-child {
+            border-bottom: 0;
+        }
+
+        .fila-carrito h2,
+        .fila-carrito p {
+            margin: 0;
+        }
+
+        .fila-carrito h2 {
+            font-size: 1.04rem;
+        }
+
+        .fila-carrito p {
+            color: var(--texto-suave);
+            margin-top: 6px;
+        }
+
+        @media (max-width: 760px) {
+            .carrito-resumen,
+            .fila-carrito,
+            .acciones-carrito,
+            .controles-carrito,
+            .form-cantidad-carrito {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .controles-carrito,
+            .form-cantidad-carrito,
+            .selector-cantidad,
+            .boton-secundario,
+            .boton-eliminar,
+            .boton-detalle {
+                width: 100%;
+            }
+
+            .subtotal-item,
+            .total-carrito {
+                text-align: left;
+                justify-items: start;
+            }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('click', function (event) {
+            const boton = event.target.closest('.btn-cantidad');
+            if (!boton) return;
+
+            const input = document.getElementById(boton.dataset.inputId);
+            if (!input) return;
+
+            const min = Number(input.min || 0);
+            const actual = Number(input.value || 0);
+            const delta = boton.dataset.action === 'increment' ? 1 : -1;
+            input.value = Math.max(min, actual + delta);
+        });
+    </script>
+{% endblock %}
