@@ -40,6 +40,11 @@
             padding: 12px 0;
         }
 
+        .resumen-checkout p span {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
         .resumen-checkout p:last-child {
             border-bottom: 0;
         }
@@ -51,6 +56,36 @@
 
         .enlace-secundario {
             margin-left: 16px;
+        }
+
+        @media (max-width: 520px) {
+            .pagina-simple {
+                width: calc(100% - 28px);
+            }
+
+            .resumen-checkout {
+                margin: 20px 0 16px;
+                padding: 14px;
+            }
+
+            .resumen-checkout p {
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .resumen-checkout p strong {
+                flex: 0 0 auto;
+            }
+
+            .pagina-simple form .boton-detalle {
+                width: 100%;
+            }
+
+            .enlace-secundario {
+                display: block;
+                margin: 14px 0 0;
+                text-align: center;
+            }
         }
     </style>
 {% endblock %}

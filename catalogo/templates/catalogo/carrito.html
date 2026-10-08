@@ -331,6 +331,30 @@
                 justify-items: start;
             }
         }
+
+        @media (max-width: 420px) {
+            .pagina-simple {
+                width: calc(100% - 24px);
+            }
+
+            .carrito-resumen {
+                align-items: flex-start;
+                padding: 16px;
+            }
+
+            .fila-carrito {
+                gap: 14px;
+                padding: 15px 13px;
+            }
+
+            .fila-carrito h2 {
+                overflow-wrap: anywhere;
+            }
+
+            .acciones-carrito {
+                gap: 9px;
+            }
+        }
     </style>
 
     <script>

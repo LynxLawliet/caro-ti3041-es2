@@ -106,5 +106,26 @@
             margin: 18px 0 0;
             text-align: center;
         }
+
+        @media (max-width: 520px) {
+            .pagina-formulario {
+                width: calc(100% - 28px);
+            }
+
+            .formulario-sesion {
+                gap: 9px;
+                margin-top: 22px;
+                padding: 18px 16px;
+            }
+
+            .encabezado-formulario {
+                align-items: flex-start;
+                gap: 11px;
+            }
+
+            .encabezado-formulario h2 {
+                font-size: 1.02rem;
+            }
+        }
     </style>
 {% endblock %}

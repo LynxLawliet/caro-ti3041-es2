@@ -53,6 +53,10 @@ button, input {
     font: inherit;
 }
 
+img, svg, video {
+    max-width: 100%;
+}
+
 button:focus-visible, input:focus-visible, a:focus-visible {
     outline: 3px solid rgba(245, 173, 24, 0.72);
     outline-offset: 3px;
@@ -399,6 +403,19 @@ main {
 
     .nav-links {
         flex: 1 1 auto;
+        min-width: 0;
+        gap: 4px;
+    }
+
+    .nav-links a, .nav-links span {
+        font-size: 0.84rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .footer-grid {
+        grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(140px, 0.7fr));
+        gap: 28px;
     }
 }
 
@@ -408,7 +425,9 @@ main {
     }
 
     .navbar {
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
         min-height: auto;
         padding: 12px 0;
     }
@@ -423,16 +442,30 @@ main {
     }
 
     .nav-links {
-        flex-basis: 100%;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        gap: 4px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+        justify-content: stretch;
+        gap: 5px;
         overflow: visible;
         padding: 2px 0 5px;
     }
 
-    .nav-links > a:not(.btn-acento) {
+    .nav-links > a {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
         padding: 8px;
+        text-align: center;
+    }
+
+    .nav-links .btn-acento {
+        padding: 8px;
+    }
+
+    .buscador {
+        width: 100%;
+        min-width: 0;
     }
 
     .saludo-usuario {
@@ -451,15 +484,44 @@ main {
     .footer-bottom {
         flex-direction: column;
     }
+
+    .site-footer {
+        padding: 38px 16px 18px;
+    }
 }
 
 @media (max-width: 420px) {
+    .contenedor {
+        width: calc(100% - 28px);
+    }
+
+    .marca {
+        min-width: 0;
+        font-size: 0.86rem;
+    }
+
+    .nav-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nav-links a, .nav-links span {
+        font-size: 0.82rem;
+    }
+
+    .mensajes {
+        padding: 0 14px;
+    }
+
     .footer-grid {
         grid-template-columns: 1fr;
     }
 
     .footer-presentacion {
         grid-column: auto;
+    }
+
+    .footer-bottom {
+        overflow-wrap: anywhere;
     }
 }
 

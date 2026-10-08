@@ -445,6 +445,38 @@
     }
 }
 
+@media (max-width: 380px) {
+    .detalle-contenedor {
+        width: calc(100% - 24px);
+    }
+
+    .detalle-info {
+        padding: 20px 16px;
+    }
+
+    .detalle-info h1 {
+        font-size: 1.8rem;
+    }
+
+    .detalle-pie-imagen {
+        align-items: flex-start;
+        font-size: 0.74rem;
+    }
+
+    .control-compra {
+        flex-wrap: wrap;
+    }
+
+    .control-compra input,
+    .control-compra button {
+        min-height: 46px;
+    }
+
+    .detalle-confianza > span {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .detalle-imagen {
         transition: none;

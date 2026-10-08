@@ -83,8 +83,37 @@
         }
 
         @media (max-width: 520px) {
+            .confirmacion-pedido {
+                width: calc(100% - 28px);
+            }
+
+            .resumen-pedido {
+                padding: 6px 14px;
+            }
+
+            .linea-pedido,
+            .total-pedido {
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .linea-pedido span,
+            .total-pedido span {
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+
+            .linea-pedido strong,
+            .total-pedido strong {
+                flex: 0 0 auto;
+            }
+
             .acciones-confirmacion {
                 flex-direction: column;
+            }
+
+            .acciones-confirmacion > a {
+                width: 100%;
             }
         }
     </style>
