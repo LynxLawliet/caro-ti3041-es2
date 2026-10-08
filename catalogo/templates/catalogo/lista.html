@@ -101,8 +101,10 @@
                                 <form method="post" action="{% url 'comprar' producto.id %}">
                                     {% csrf_token %}
                                     <div class="control-compra control-compra-directa">
-                                        <label class="etiqueta-cantidad" for="cantidad-compra-{{ producto.id }}">Cantidad</label>
-                                        <input id="cantidad-compra-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                        <div class="campo-cantidad">
+                                            <label class="etiqueta-cantidad" for="cantidad-compra-{{ producto.id }}">Cantidad</label>
+                                            <input id="cantidad-compra-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                        </div>
                                         <button class="boton-comprar" type="submit">Comprar</button>
                                     </div>
                                 </form>
@@ -111,9 +113,11 @@
                         {% if producto.stock > 0 %}
                             <form method="post" action="{% url 'agregar_al_carrito' producto.id %}">
                                 {% csrf_token %}
-                                <label class="etiqueta-cantidad" for="cantidad-{{ producto.id }}">Cantidad</label>
                                 <div class="control-compra">
-                                    <input id="cantidad-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                    <div class="campo-cantidad">
+                                        <label class="etiqueta-cantidad" for="cantidad-{{ producto.id }}">Cantidad</label>
+                                        <input id="cantidad-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                    </div>
                                     <button class="boton-secundario boton-agregar-carrito" type="submit">Agregar al carrito</button>
                                 </div>
                             </form>
@@ -550,9 +554,14 @@
         }
 
         .acciones-enlaces {
-            display: grid;
+            display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .acciones-enlaces > * {
+            flex: 1;
+            min-width: 140px;
         }
 
         .acciones-producto form {
@@ -561,28 +570,45 @@
 
         .acciones-producto .boton-detalle {
             margin-top: 0;
+            min-height: 48px;
+            padding: 8px 14px;
+            white-space: nowrap;
+            width: 100%;
         }
 
         .etiqueta-cantidad {
             color: var(--texto-suave);
-            display: block;
             font-size: 0.82rem;
             font-weight: 700;
-            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        .campo-cantidad {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            min-width: 0;
         }
 
         .control-compra {
+            align-items: center;
             display: grid;
-            gap: 7px;
-            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+            grid-template-columns: min-content minmax(0, 1fr);
         }
 
         .control-compra input {
             border: 1px solid var(--borde);
             border-radius: 4px;
-            min-height: 42px;
+            min-height: 46px;
             min-width: 0;
             padding: 8px;
+            width: 72px;
+        }
+
+        .acciones-producto .control-compra button {
+            min-width: 0;
+            padding: 8px 10px;
             width: 100%;
         }
 

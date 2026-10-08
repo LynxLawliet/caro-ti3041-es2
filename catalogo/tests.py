@@ -1,5 +1,4 @@
 from decimal import Decimal
-from unittest.mock import patch
 
 from django.conf import settings
 from django.test import TestCase
@@ -105,9 +104,9 @@ class AdministracionPaginaModelTests(TestCase):
         self.assertNotContains(response, "<style")
 
     def test_contenido_persistido_sobrescribe_valor_predeterminado(self):
-        ContenidoSitio.objects.create(
+        ContenidoSitio.objects.update_or_create(
             clave="marca",
-            valor="Ferretería actualizada",
+            defaults={"valor": "Ferretería actualizada"},
         )
 
         self.assertEqual(
@@ -129,12 +128,173 @@ class AdministracionPaginaModelTests(TestCase):
         self.assertEqual(registro.usuario, usuario)
         self.assertEqual(registro.objeto_id, "12")
 
-    def test_modelos_de_administracion_estan_disponibles_en_admin(self):
-        self.assertIn(ContenidoSitio, admin.site._registry)
-        self.assertIn(RegistroAdministrativo, admin.site._registry)
+    def test_indice_admin_muestra_solo_productos_del_catalogo(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="superadmin-indice",
+            email="superadmin@example.com",
+            password="clave-segura",
+        )
+        self.client.force_login(usuario)
 
-    @patch("catalogo.views.guardar_json")
-    def test_panel_guarda_contenido_y_registra_auditoria(self, guardar_json_mock):
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(Producto, admin.site._registry)
+        self.assertContains(
+            response,
+            reverse("admin:catalogo_producto_changelist"),
+        )
+        for modelo in (
+            Categoria,
+            ContenidoSitio,
+            DetallePedido,
+            Pedido,
+            RegistroAdministrativo,
+        ):
+            with self.subTest(modelo=modelo.__name__):
+                self.assertNotIn(modelo, admin.site._registry)
+
+    def test_registros_json_se_importan_y_en_admin_solo_aparecen_productos(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="superadmin-catalogo",
+            email="catalogo@example.com",
+            password="clave-segura",
+        )
+        self.client.force_login(usuario)
+
+        productos = self.client.get(reverse("admin:catalogo_producto_changelist"))
+        indice = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(Producto.objects.count(), 41)
+        self.assertEqual(Categoria.objects.count(), 15)
+        self.assertEqual(ContenidoSitio.objects.count(), 30)
+        self.assertContains(productos, "Martillo de carpintero 16 oz")
+        self.assertContains(indice, reverse("admin:catalogo_producto_changelist"))
+        self.assertNotContains(indice, "categorías")
+        self.assertNotContains(indice, "pedidos")
+        self.assertNotContains(indice, "contenidos del sitio")
+
+    def test_editar_producto_en_admin_actualiza_catalogo_publico(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="superadmin-producto",
+            email="producto@example.com",
+            password="clave-segura",
+        )
+        self.client.force_login(usuario)
+        producto = Producto.objects.get(pk=1)
+
+        response = self.client.post(
+            reverse("admin:catalogo_producto_change", args=[producto.pk]),
+            {
+                "nombre": "Martillo actualizado desde Admin",
+                "categoria": str(producto.categoria_id),
+                "precio": "8990",
+                "stock": "21",
+                "imagen_url": producto.imagen_url,
+                "imagen_archivo": producto.imagen_archivo,
+                "descripcion": "Actualizado en Django Admin",
+                "visible": "on",
+                "_save": "Guardar",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, "Martillo actualizado desde Admin")
+        pagina_catalogo = self.client.get(reverse("lista"))
+        self.assertContains(pagina_catalogo, "Martillo actualizado desde Admin")
+
+    def test_lista_admin_permite_editar_precio_stock_y_visibilidad(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="superadmin-edicion-rapida",
+            email="edicion-rapida@example.com",
+            password="clave-segura",
+        )
+        self.client.force_login(usuario)
+        producto = Producto.objects.get(pk=1)
+        url = reverse("admin:catalogo_producto_changelist")
+        pagina = self.client.get(url)
+
+        self.assertContains(pagina, 'id="id_form-0-precio"')
+        self.assertContains(pagina, 'id="id_form-0-stock"')
+        self.assertContains(pagina, 'id="id_form-0-visible"')
+
+        respuesta = self.client.post(url, {
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "1",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "form-0-id": str(producto.pk),
+            "form-0-precio": "9990",
+            "form-0-stock": "19",
+            "form-0-visible": "on",
+            "_save": "Guardar",
+        })
+
+        self.assertEqual(respuesta.status_code, 302)
+        producto.refresh_from_db()
+        self.assertEqual(producto.precio, Decimal("9990"))
+        self.assertEqual(producto.stock, 19)
+        self.assertTrue(producto.visible)
+
+    def test_usuario_staff_puede_hacer_crud_de_productos_en_admin(self):
+        usuario = get_user_model().objects.create_user(
+            username="staff-crud-productos",
+            is_staff=True,
+        )
+        self.client.force_login(usuario)
+        categoria = Categoria.objects.first()
+        producto_url = reverse("admin:catalogo_producto_changelist")
+
+        indice = self.client.get(reverse("admin:index"))
+        self.assertContains(indice, producto_url)
+        listado = self.client.get(producto_url)
+        self.assertEqual(listado.status_code, 200)
+        self.assertContains(listado, "Martillo de carpintero 16 oz")
+
+        alta = self.client.post(
+            reverse("admin:catalogo_producto_add"),
+            {
+                "nombre": "Producto creado desde Admin",
+                "categoria": str(categoria.pk),
+                "precio": "12500",
+                "stock": "8",
+                "imagen_url": "",
+                "imagen_archivo": "",
+                "descripcion": "Prueba de alta desde Django Admin",
+                "visible": "on",
+                "_save": "Guardar",
+            },
+        )
+        self.assertEqual(alta.status_code, 302)
+        producto = Producto.objects.get(nombre="Producto creado desde Admin")
+
+        edicion = self.client.post(
+            reverse("admin:catalogo_producto_change", args=[producto.pk]),
+            {
+                "nombre": "Producto editado desde Admin",
+                "categoria": str(categoria.pk),
+                "precio": "15000",
+                "stock": "6",
+                "imagen_url": "",
+                "imagen_archivo": "",
+                "descripcion": "Prueba de edición desde Django Admin",
+                "visible": "on",
+                "_save": "Guardar",
+            },
+        )
+        self.assertEqual(edicion.status_code, 302)
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, "Producto editado desde Admin")
+
+        url_eliminar = reverse("admin:catalogo_producto_delete", args=[producto.pk])
+        confirmacion = self.client.get(url_eliminar)
+        self.assertEqual(confirmacion.status_code, 200)
+        eliminacion = self.client.post(url_eliminar, {"post": "yes"})
+        self.assertEqual(eliminacion.status_code, 302)
+        self.assertFalse(Producto.objects.filter(pk=producto.pk).exists())
+
+    def test_panel_guarda_contenido_y_registra_auditoria(self):
         usuario = get_user_model().objects.create_user(
             username="editor",
             password="clave",
@@ -159,9 +319,8 @@ class AdministracionPaginaModelTests(TestCase):
             RegistroAdministrativo.objects.filter(usuario=usuario).count(),
             1,
         )
-        guardar_json_mock.assert_called_once()
 
-    def test_edicion_desde_admin_registra_auditoria(self):
+    def test_admin_catalogo_oculta_modelos_que_no_son_productos(self):
         usuario = get_user_model().objects.create_superuser(
             username="root",
             email="root@example.com",
@@ -169,18 +328,15 @@ class AdministracionPaginaModelTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("admin:catalogo_contenidositio_add"),
-            {"clave": "admin-titulo", "valor": "Título administrable", "_save": "Guardar"},
-        )
+        response = self.client.get(reverse("admin:index"))
 
-        self.assertEqual(response.status_code, 302)
-        contenido = ContenidoSitio.objects.get(clave="admin-titulo")
-        self.assertEqual(contenido.actualizado_por, usuario)
-        self.assertEqual(
-            RegistroAdministrativo.objects.get(objeto_id=str(contenido.pk)).accion,
-            RegistroAdministrativo.Accion.CREACION,
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("admin:catalogo_producto_changelist"),
         )
+        self.assertNotContains(response, "Contenido del sitio")
+        self.assertNotContains(response, "Registro administrativo")
 
 
 class CatalogoModelTests(TestCase):
@@ -226,7 +382,7 @@ class CatalogoModelTests(TestCase):
         self.assertEqual(Pedido.objects.count(), 0)
 
     def test_detalle_conserva_datos_del_producto_si_se_elimina(self):
-        categoria = Categoria.objects.create(nombre='Herramientas manuales')
+        categoria = Categoria.objects.create(nombre='Categoría de prueba')
         producto = Producto.objects.create(
             nombre='Martillo de prueba',
             categoria=categoria,
@@ -435,6 +591,19 @@ class AdministracionAuthTests(TestCase):
         self.assertRedirects(response, reverse('admin_landing'))
         pagina = self.client.get(reverse('lista'))
         self.assertContains(pagina, reverse('admin_landing'))
+
+    def test_usuario_sin_privilegios_no_ve_el_boton_de_administracion(self):
+        usuario = get_user_model().objects.create_user(
+            username='cliente-sin-permisos',
+            password='clave-segura',
+            is_staff=False,
+        )
+        self.client.force_login(usuario)
+
+        pagina = self.client.get(reverse('lista'))
+
+        self.assertNotContains(pagina, reverse('admin_landing'))
+        self.assertNotContains(pagina, '>Administración</a>')
 
     def test_cuenta_no_autenticada_no_puede_entrar_al_panel(self):
         response = self.client.get(reverse('admin_landing'))

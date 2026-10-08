@@ -1,14 +1,13 @@
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.http import Http404
 from django.shortcuts import redirect, render
-from django.http import HttpResponse, Http404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.urls import reverse
 from django.utils.text import slugify
-import json
-import os
-from django.conf import settings
 
-from .models import ContenidoSitio, Pedido, RegistroAdministrativo
+from .models import Categoria, ContenidoSitio, Pedido, Producto, RegistroAdministrativo
 
 CATEGORIA_VISUAL = {
     "herramientas-manuales": "🔨",
@@ -62,7 +61,7 @@ CONTENIDO_POR_DEFECTO = {
 }
 
 def index(request):
-    productos = _productos_con_stock_temporal(request)
+    productos = _productos_disponibles()
     destacados = productos[:4]
     conteo_categorias = {}
     for producto in productos:
@@ -90,50 +89,38 @@ def index(request):
     }
     return render(request, 'catalogo/home.html', contexto)
 
-# Función auxiliar para leer el JSON
-def cargar_datos():
-    ruta = os.path.join(settings.BASE_DIR, 'catalogo', 'data', 'productos.json')
-    with open(ruta, 'r', encoding='utf-8') as f:
-        productos = json.load(f)
-    for producto in productos:
-        producto.setdefault('descripcion', '')
-        producto.setdefault('visible', True)
-    return productos
-
-
 def cargar_contenido():
-    ruta = os.path.join(settings.BASE_DIR, 'catalogo', 'data', 'contenido.json')
-    try:
-        with open(ruta, 'r', encoding='utf-8') as f:
-            contenido = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        contenido = {}
     contenido_sitio = {
         registro.clave: registro.valor
         for registro in ContenidoSitio.objects.all()
     }
-    return {**CONTENIDO_POR_DEFECTO, **contenido, **contenido_sitio}
+    return {**CONTENIDO_POR_DEFECTO, **contenido_sitio}
 
 
-def guardar_json(nombre, datos):
-    ruta = os.path.join(settings.BASE_DIR, 'catalogo', 'data', nombre)
-    temporal = f'{ruta}.tmp'
-    with open(temporal, 'w', encoding='utf-8') as f:
-        json.dump(datos, f, ensure_ascii=False, indent=2)
-    os.replace(temporal, ruta)
+def _producto_a_dict(producto):
+    return {
+        'id': producto.pk,
+        'nombre': producto.nombre,
+        'categoria': producto.categoria.nombre,
+        'precio': int(producto.precio),
+        'stock': producto.stock,
+        'imagen_url': producto.imagen_url,
+        'imagen_archivo': producto.imagen_archivo,
+        'descripcion': producto.descripcion,
+        'visible': producto.visible,
+    }
 
 
-def _productos_con_stock_temporal(request):
-    productos = cargar_datos()
-    stock_temporal = request.session.get('stock_temporal', {})
-    for producto in productos:
-        clave_producto = str(producto['id'])
-        if clave_producto in stock_temporal:
-            producto['stock'] = stock_temporal[clave_producto]
-    return [producto for producto in productos if producto.get('visible', True)]
+def _productos_disponibles():
+    return [
+        _producto_a_dict(producto)
+        for producto in Producto.objects.filter(visible=True)
+        .select_related('categoria')
+        .order_by('pk')
+    ]
 
 def lista(request):
-    productos = _productos_con_stock_temporal(request)
+    productos = _productos_disponibles()
     busqueda = request.GET.get('q', request.GET.get('nombre', '')).strip()
     categoria_seleccionada = request.GET.get('categoria', '').strip()
 
@@ -152,7 +139,7 @@ def lista(request):
         ]
 
     # Cálculos para el resumen
-    todos_los_productos = _productos_con_stock_temporal(request)
+    todos_los_productos = _productos_disponibles()
     total_registros = len(productos)
     productos_con_stock = sum(1 for p in productos if p['stock'] > 0)
     categorias = sorted({p['categoria'] for p in todos_los_productos})
@@ -172,7 +159,10 @@ def admin_landing(request):
         messages.error(request, 'Debes iniciar sesión con una cuenta administradora.')
         return redirect(f"{reverse('login')}?next={reverse('admin_landing')}")
 
-    productos = cargar_datos()
+    productos = [
+        _producto_a_dict(producto)
+        for producto in Producto.objects.select_related('categoria').order_by('pk')
+    ]
     contenido = cargar_contenido()
     if request.method == 'POST':
         accion = request.POST.get('accion')
@@ -187,7 +177,6 @@ def admin_landing(request):
                         'actualizado_por': request.user,
                     },
                 )
-            guardar_json('contenido.json', contenido)
             RegistroAdministrativo.registrar(
                 usuario=request.user,
                 accion=RegistroAdministrativo.Accion.ACTUALIZACION,
@@ -198,103 +187,104 @@ def admin_landing(request):
         elif accion == 'guardar_producto':
             try:
                 producto_id = int(request.POST.get('producto_id', ''))
-                producto = next(producto for producto in productos if producto['id'] == producto_id)
+                producto = Producto.objects.get(pk=producto_id)
+                nombre = request.POST.get('nombre', '').strip()
+                categoria_nombre = request.POST.get('categoria', '').strip()
                 stock = int(request.POST.get('stock', '0'))
-                precio = int(request.POST.get('precio', producto.get('precio', 0)))
+                precio = int(request.POST.get('precio', producto.precio))
+                if not nombre or not categoria_nombre:
+                    raise ValueError
                 if stock < 0 or precio < 0:
                     raise ValueError
-                producto['nombre'] = request.POST.get('nombre', '').strip()
-                producto['categoria'] = request.POST.get('categoria', '').strip()
-                producto['descripcion'] = request.POST.get('descripcion', '').strip()
-                producto['imagen_url'] = request.POST.get('imagen_url', '').strip()
-                producto['precio'] = precio
-                producto['stock'] = stock
-                producto['visible'] = request.POST.get('visible') == 'on'
-                if not producto['nombre'] or not producto['categoria']:
-                    raise ValueError
-                guardar_json('productos.json', productos)
-                stock_temporal = request.session.get('stock_temporal', {})
-                stock_temporal.pop(str(producto_id), None)
-                request.session['stock_temporal'] = stock_temporal
-                request.session.modified = True
+                with transaction.atomic():
+                    categoria, _ = Categoria.objects.get_or_create(nombre=categoria_nombre)
+                    producto.nombre = nombre
+                    producto.categoria = categoria
+                    producto.descripcion = request.POST.get('descripcion', '').strip()
+                    producto.imagen_url = request.POST.get('imagen_url', '').strip()
+                    producto.precio = precio
+                    producto.stock = stock
+                    producto.visible = request.POST.get('visible') == 'on'
+                    producto.full_clean()
+                    producto.save()
                 RegistroAdministrativo.registrar(
                     usuario=request.user,
                     accion=RegistroAdministrativo.Accion.ACTUALIZACION,
                     modelo="Producto",
                     objeto_id=producto_id,
-                    resumen=f'Se actualizó el producto "{producto["nombre"]}".',
+                    resumen=f'Se actualizó el producto "{producto.nombre}".',
                 )
-                messages.success(request, f'El producto "{producto["nombre"]}" fue actualizado.')
-            except (StopIteration, TypeError, ValueError):
+                messages.success(request, f'El producto "{producto.nombre}" fue actualizado.')
+            except (Producto.DoesNotExist, TypeError, ValueError, ValidationError):
                 messages.error(request, 'No se pudo actualizar el producto. Revisa los campos.')
         elif accion == 'crear_producto':
             try:
                 nombre = request.POST.get('nombre', '').strip()
-                categoria = request.POST.get('categoria', '').strip()
+                categoria_nombre = request.POST.get('categoria', '').strip()
                 precio = int(request.POST.get('precio', '0'))
                 stock = int(request.POST.get('stock', '0'))
-                if not nombre or not categoria or precio < 0 or stock < 0:
+                if not nombre or not categoria_nombre or precio < 0 or stock < 0:
                     raise ValueError
-                nuevo_id = max((producto['id'] for producto in productos), default=0) + 1
-                productos.append({
-                    'id': nuevo_id,
-                    'nombre': nombre,
-                    'categoria': categoria,
-                    'precio': precio,
-                    'stock': stock,
-                    'imagen_url': request.POST.get('imagen_url', '').strip(),
-                    'imagen_archivo': '',
-                    'descripcion': request.POST.get('descripcion', ''),
-                    'visible': request.POST.get('visible') == 'on',
-                })
-                guardar_json('productos.json', productos)
+                with transaction.atomic():
+                    categoria, _ = Categoria.objects.get_or_create(nombre=categoria_nombre)
+                    producto = Producto(
+                        nombre=nombre,
+                        categoria=categoria,
+                        precio=precio,
+                        stock=stock,
+                        imagen_url=request.POST.get('imagen_url', '').strip(),
+                        descripcion=request.POST.get('descripcion', '').strip(),
+                        visible=request.POST.get('visible') == 'on',
+                    )
+                    producto.full_clean()
+                    producto.save()
                 RegistroAdministrativo.registrar(
                     usuario=request.user,
                     accion=RegistroAdministrativo.Accion.CREACION,
                     modelo="Producto",
-                    objeto_id=nuevo_id,
+                    objeto_id=producto.pk,
                     resumen=f'Se añadió el producto "{nombre}" al catálogo.',
                 )
                 messages.success(request, f'El producto "{nombre}" fue añadido al catálogo.')
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, ValidationError):
                 messages.error(request, 'No se pudo añadir el producto. Revisa nombre, precio y stock.')
         elif accion == 'eliminar_producto':
             try:
                 producto_id = int(request.POST.get('producto_id', ''))
-                producto = next(producto for producto in productos if producto['id'] == producto_id)
-                productos = [producto_actual for producto_actual in productos if producto_actual['id'] != producto_id]
-                guardar_json('productos.json', productos)
+                producto = Producto.objects.get(pk=producto_id)
+                nombre = producto.nombre
+                producto.delete()
                 carrito = request.session.get('carrito', {})
                 carrito.pop(str(producto_id), None)
                 request.session['carrito'] = carrito
-                stock_temporal = request.session.get('stock_temporal', {})
-                stock_temporal.pop(str(producto_id), None)
-                request.session['stock_temporal'] = stock_temporal
                 request.session.modified = True
                 RegistroAdministrativo.registrar(
                     usuario=request.user,
                     accion=RegistroAdministrativo.Accion.ELIMINACION,
                     modelo="Producto",
                     objeto_id=producto_id,
-                    resumen=f'Se eliminó el producto "{producto["nombre"]}" del catálogo.',
+                    resumen=f'Se eliminó el producto "{nombre}" del catálogo.',
                 )
-                messages.success(request, f'El producto "{producto["nombre"]}" fue eliminado del catálogo.')
-            except (StopIteration, TypeError, ValueError):
+                messages.success(request, f'El producto "{nombre}" fue eliminado del catálogo.')
+            except (Producto.DoesNotExist, TypeError, ValueError):
                 messages.error(request, 'No se pudo eliminar el producto seleccionado.')
 
+    productos = [
+        _producto_a_dict(producto)
+        for producto in Producto.objects.select_related('categoria').order_by('pk')
+    ]
+    contenido = cargar_contenido()
     return render(request, 'catalogo/admin_landing.html', {
         'productos': productos,
         'contenido': contenido,
     })
 
 def detalle(request, producto_id):
-    productos = _productos_con_stock_temporal(request)
-    # Buscar el producto por id
+    productos = _productos_disponibles()
     producto = next((p for p in productos if p['id'] == producto_id), None)
-    
     if not producto:
-        raise Http404("Producto no encontrado en la ferretería") # Manejo de caso inexistente
-        
+        raise Http404("Producto no encontrado en la ferretería")
+
     return render(request, 'catalogo/detalle.html', {'producto': producto})
 
 
@@ -312,7 +302,7 @@ def agregar_al_carrito(request, producto_id):
         return redirect('detalle', producto_id=producto_id)
 
     producto = next(
-        (producto for producto in _productos_con_stock_temporal(request) if producto['id'] == producto_id),
+        (producto for producto in _productos_disponibles() if producto['id'] == producto_id),
         None,
     )
     if not producto:
@@ -392,7 +382,7 @@ def actualizar_cantidad_carrito(request, producto_id):
             return redirect('carrito')
 
         producto = next(
-            (producto for producto in _productos_con_stock_temporal(request) if producto['id'] == producto_id),
+            (producto for producto in _productos_disponibles() if producto['id'] == producto_id),
             None,
         )
         try:
@@ -485,7 +475,7 @@ def comprar(request, producto_id):
         return redirect('detalle', producto_id=producto_id)
 
     producto = next(
-        (producto for producto in _productos_con_stock_temporal(request) if producto['id'] == producto_id),
+        (producto for producto in _productos_disponibles() if producto['id'] == producto_id),
         None,
     )
     if not producto:
@@ -539,25 +529,35 @@ def checkout(request):
 
     total = sum(item['subtotal'] for item in items)
     if request.method == 'POST':
-        stock_temporal = request.session.get('stock_temporal', {})
-        for item in items:
-            clave_producto = str(item['id'])
-            stock_actual = next(
-                (producto['stock'] for producto in _productos_con_stock_temporal(request) if producto['id'] == item['id']),
-                0,
-            )
-            if item['cantidad'] > stock_actual:
-                messages.error(request, f"El stock de {item['nombre']} cambió y ya no alcanza para completar el pedido.")
-                return redirect('carrito')
-            stock_temporal[clave_producto] = stock_actual - item['cantidad']
-
         usuario = request.user if request.user.is_authenticated else None
-        Pedido.registrar_compra(
-            items,
-            nombre_cliente=request.session['usuario_ficticio'],
-            usuario=usuario,
-        )
-        request.session['stock_temporal'] = stock_temporal
+        with transaction.atomic():
+            productos = {
+                producto.pk: producto
+                for producto in Producto.objects.filter(
+                    pk__in=[item['id'] for item in items],
+                    visible=True,
+                ).select_for_update()
+            }
+            for item in items:
+                producto = productos.get(item['id'])
+                if producto is None or item['cantidad'] > producto.stock:
+                    messages.error(
+                        request,
+                        f"El stock de {item['nombre']} cambió y ya no alcanza para completar el pedido.",
+                    )
+                    return redirect('carrito')
+
+            for item in items:
+                producto = productos[item['id']]
+                producto.stock -= item['cantidad']
+                producto.save(update_fields=('stock', 'actualizado_en'))
+
+            Pedido.registrar_compra(
+                items,
+                nombre_cliente=request.session['usuario_ficticio'],
+                usuario=usuario,
+            )
+
         request.session['ultimo_pedido'] = items
         request.session.pop('carrito', None)
         messages.success(request, 'Pedido confirmado correctamente (simulación).')
