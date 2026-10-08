@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib import admin
+from django.contrib.sessions.models import Session
 
 from .models import (
     Categoria,
@@ -504,6 +505,25 @@ class CheckoutHistorialTests(TestCase):
 
 
 class CarritoCantidadTests(TestCase):
+    def test_carrito_se_persiste_en_la_base_de_datos(self):
+        self.assertEqual(
+            settings.SESSION_ENGINE,
+            "django.contrib.sessions.backends.db",
+        )
+
+        respuesta = self.client.post(
+            reverse("agregar_al_carrito", args=[1]),
+            {"cantidad": "2"},
+        )
+
+        self.assertRedirects(respuesta, reverse("carrito"))
+        session_key = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        sesion_guardada = Session.objects.get(session_key=session_key)
+        self.assertEqual(
+            sesion_guardada.get_decoded()["carrito"]["1"]["cantidad"],
+            2,
+        )
+
     def test_agregar_al_carrito_va_al_carrito_y_suma_solo_el_producto_elegido(self):
         respuesta_martillo = self.client.post(
             reverse('agregar_al_carrito', args=[1]),

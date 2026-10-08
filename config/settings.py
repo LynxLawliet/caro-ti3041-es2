@@ -50,9 +50,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Sesiones firmadas en cookies: el catálogo no persiste datos en la base de datos.
-SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
-
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
