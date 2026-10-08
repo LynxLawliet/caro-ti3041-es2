@@ -3,164 +3,89 @@
 
 {% block title %}{{ producto.nombre }} | Ferretería Caro-Kahn{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'catalogo/css/detalle.css' %}">
+{% endblock %}
+
 {% block content %}
-    <article class="detalle-producto">
-        <img src="{% if producto.imagen_url %}{{ producto.imagen_url }}{% else %}{% static 'catalogo/img/logo-caro-kahn.jpg' %}{% endif %}"
-             alt="Imagen de {{ producto.nombre }}"
-             class="detalle-imagen"
-             onerror="this.onerror=null;this.src='{% static 'catalogo/img/logo-caro-kahn.jpg' %}';">
-        <div>
-            <p class="detalle-categoria">{{ producto.categoria }}</p>
-            <h1>{{ producto.nombre }}</h1>
-            {% if producto.descripcion %}<p class="detalle-descripcion">{{ producto.descripcion|linebreaksbr }}</p>{% endif %}
-            <p class="detalle-precio">${{ producto.precio|floatformat:0 }}</p>
-            {% if producto.stock > 0 %}
-                <p>Stock disponible: {{ producto.stock }} unidades</p>
-                <form method="post" action="{% url 'agregar_al_carrito' producto.id %}">
-                    {% csrf_token %}
-                    <label class="etiqueta-cantidad" for="cantidad-detalle">Cantidad a añadir</label>
-                    <div class="control-compra">
-                        <input id="cantidad-detalle" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
-                        <button class="boton-detalle" type="submit">Añadir al carrito</button>
+    <section class="pagina-detalle">
+        <div class="contenedor detalle-contenedor">
+            <nav class="migas-pan" aria-label="Ruta de navegación">
+                <a href="{% url 'inicio' %}">Inicio</a>
+                <span aria-hidden="true">/</span>
+                <a href="{% url 'lista' %}">Catálogo</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">{{ producto.nombre }}</span>
+            </nav>
+
+            <article class="detalle-producto">
+                <div class="detalle-visual">
+                    <span class="detalle-etiqueta-imagen">Ficha del producto</span>
+                    <div class="detalle-marco-imagen">
+                        <img src="{% if producto.imagen_url %}{{ producto.imagen_url }}{% else %}{% static 'catalogo/img/logo-caro-kahn.jpg' %}{% endif %}"
+                             alt="Imagen de {{ producto.nombre }}"
+                             class="detalle-imagen"
+                             onerror="this.onerror=null;this.src='{% static 'catalogo/img/logo-caro-kahn.jpg' %}';">
                     </div>
-                </form>
-                {% if request.session.usuario_ficticio %}
-                    <form method="post" action="{% url 'comprar' producto.id %}">
-                        {% csrf_token %}
-                        <label class="etiqueta-cantidad" for="cantidad-compra-detalle">Cantidad para comprar</label>
-                        <div class="control-compra">
-                            <input id="cantidad-compra-detalle" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
-                            <button class="boton-comprar" type="submit">Comprar ahora</button>
-                        </div>
-                    </form>
-                {% endif %}
-            {% else %}
-                <p class="alerta-stock">Producto sin stock</p>
-            {% endif %}
-            <p><a href="{% url 'lista' %}">Volver al catálogo</a></p>
+                    <div class="detalle-pie-imagen">
+                        <span class="detalle-punto" aria-hidden="true"></span>
+                        <span>Herramientas y materiales seleccionados</span>
+                    </div>
+                </div>
+
+                <div class="detalle-info">
+                    <p class="detalle-categoria"><span aria-hidden="true">↗</span> {{ producto.categoria }}</p>
+                    <h1>{{ producto.nombre }}</h1>
+                    {% if producto.descripcion %}
+                        <p class="detalle-descripcion">{{ producto.descripcion|linebreaksbr }}</p>
+                    {% endif %}
+
+                    <div class="detalle-precio-bloque">
+                        <span class="detalle-precio-etiqueta">Precio</span>
+                        <p class="detalle-precio">${{ producto.precio|floatformat:0 }}</p>
+                    </div>
+
+                    {% if producto.stock > 0 %}
+                        <p class="detalle-stock">
+                            <span class="detalle-stock-punto" aria-hidden="true"></span>
+                            <strong>Disponible</strong>
+                            <span>{{ producto.stock }} unidades en stock</span>
+                        </p>
+                        <form class="formulario-compra" method="post" action="{% url 'agregar_al_carrito' producto.id %}">
+                            {% csrf_token %}
+                            <label class="etiqueta-cantidad" for="cantidad-detalle">Cantidad</label>
+                            <div class="control-compra">
+                                <input id="cantidad-detalle" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                <button class="boton-detalle boton-agregar" type="submit">
+                                    Agregar al carrito <span aria-hidden="true">→</span>
+                                </button>
+                            </div>
+                        </form>
+                        {% if request.session.usuario_ficticio %}
+                            <form class="formulario-compra formulario-compra-directa" method="post" action="{% url 'comprar' producto.id %}">
+                                {% csrf_token %}
+                                <label class="etiqueta-cantidad" for="cantidad-compra-detalle">Compra directa</label>
+                                <div class="control-compra">
+                                    <input id="cantidad-compra-detalle" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
+                                    <button class="boton-comprar" type="submit">Comprar ahora</button>
+                                </div>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <p class="alerta-stock"><span aria-hidden="true">!</span> Producto sin stock disponible</p>
+                    {% endif %}
+
+                    <a class="volver-catalogo" href="{% url 'lista' %}">
+                        <span aria-hidden="true">←</span> Volver al catálogo
+                    </a>
+                </div>
+            </article>
+
+            <div class="detalle-confianza" aria-label="Ventajas de comprar en Caro-Kahn">
+                <span><strong>Precio del producto</strong><small>Valor en pesos chilenos</small></span>
+                <span><strong>Disponibilidad</strong><small>Unidades indicadas en la ficha</small></span>
+                <span><strong>Compra flexible</strong><small>Añade al carrito o compra ahora</small></span>
+            </div>
         </div>
-    </article>
-
-    <style>
-        .detalle-producto {
-            align-items: center;
-            background: var(--blanco);
-            box-shadow: var(--sombra);
-            display: grid;
-            gap: 36px;
-            grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
-            margin: 0 auto;
-            max-width: 900px;
-            padding: 28px;
-        }
-
-        .detalle-imagen {
-            aspect-ratio: 4 / 3;
-            object-fit: cover;
-            width: 100%;
-        }
-
-        .detalle-categoria {
-            color: var(--texto-suave);
-            font-weight: 700;
-        }
-
-        .detalle-precio {
-            color: var(--asfalto);
-            font-size: 1.8rem;
-            font-weight: 800;
-        }
-
-        .detalle-descripcion {
-            color: var(--texto-suave);
-            line-height: 1.6;
-        }
-
-        .detalle-producto form {
-            margin-top: 20px;
-        }
-
-        .etiqueta-cantidad {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .control-compra {
-            align-items: stretch;
-            display: flex;
-            gap: 8px;
-        }
-
-        .control-compra input {
-            border: 1px solid var(--borde);
-            border-radius: 4px;
-            min-width: 74px;
-            padding: 10px;
-        }
-
-        .boton-comprar {
-            background: var(--acento);
-            border: 0;
-            border-radius: 4px;
-            color: #211900;
-            cursor: pointer;
-            font-weight: 800;
-            min-height: 42px;
-            padding: 10px 16px;
-            width: 100%;
-        }
-
-        .boton-comprar:hover,
-        .boton-comprar:focus-visible {
-            background: #ffc542;
-        }
-
-        .modal-carro[hidden] {
-            display: none;
-        }
-
-        .modal-carro {
-            align-items: center;
-            background: rgba(20, 24, 27, 0.68);
-            display: flex;
-            inset: 0;
-            justify-content: center;
-            padding: 20px;
-            position: fixed;
-            z-index: 10;
-        }
-
-        .modal-contenido {
-            background: var(--blanco);
-            max-width: 440px;
-            padding: 28px;
-            position: relative;
-            width: 100%;
-        }
-
-        .cerrar-modal {
-            background: transparent;
-            border: 0;
-            color: var(--texto-suave);
-            cursor: pointer;
-            font-size: 1.8rem;
-            line-height: 1;
-            position: absolute;
-            right: 14px;
-            top: 10px;
-        }
-
-        @media (max-width: 700px) {
-            .detalle-producto {
-                grid-template-columns: 1fr;
-            }
-
-            .control-compra {
-                flex-direction: column;
-            }
-        }
-    </style>
-
+    </section>
 {% endblock %}

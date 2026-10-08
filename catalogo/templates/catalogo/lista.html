@@ -101,7 +101,8 @@
                                 <form method="post" action="{% url 'comprar' producto.id %}">
                                     {% csrf_token %}
                                     <div class="control-compra control-compra-directa">
-                                        <input name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" aria-label="Cantidad para comprar {{ producto.nombre }}" required>
+                                        <label class="etiqueta-cantidad" for="cantidad-compra-{{ producto.id }}">Cantidad</label>
+                                        <input id="cantidad-compra-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
                                         <button class="boton-comprar" type="submit">Comprar</button>
                                     </div>
                                 </form>
@@ -113,7 +114,7 @@
                                 <label class="etiqueta-cantidad" for="cantidad-{{ producto.id }}">Cantidad</label>
                                 <div class="control-compra">
                                     <input id="cantidad-{{ producto.id }}" name="cantidad" type="number" min="1" max="{{ producto.stock }}" value="1" required>
-                                    <button class="boton-secundario" type="submit">Añadir al carrito</button>
+                                    <button class="boton-secundario boton-agregar-carrito" type="submit">Agregar al carrito</button>
                                 </div>
                             </form>
                         {% endif %}
@@ -543,18 +544,53 @@
 
         .acciones-producto {
             display: grid;
-            gap: 8px;
+            gap: 12px;
             margin-top: auto;
+            padding-top: 16px;
         }
 
         .acciones-enlaces {
             display: grid;
             gap: 8px;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1fr);
         }
 
-        .acciones-enlaces form {
+        .acciones-producto form {
             margin: 0;
+        }
+
+        .acciones-producto .boton-detalle {
+            margin-top: 0;
+        }
+
+        .etiqueta-cantidad {
+            color: var(--texto-suave);
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .control-compra {
+            display: grid;
+            gap: 7px;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .control-compra input {
+            border: 1px solid var(--borde);
+            border-radius: 4px;
+            min-height: 42px;
+            min-width: 0;
+            padding: 8px;
+            width: 100%;
+        }
+
+        .acciones-producto .boton-detalle,
+        .acciones-producto .boton-comprar,
+        .acciones-producto .boton-agregar-carrito {
+            min-height: 46px;
+            width: 100%;
         }
 
         .boton-comprar {
@@ -564,26 +600,12 @@
             color: #211900;
             cursor: pointer;
             font-weight: 800;
-            min-height: 42px;
-            padding: 10px 12px;
-            width: 100%;
+            padding: 8px 10px;
         }
 
         .boton-comprar:hover,
         .boton-comprar:focus-visible {
             background: #ffc542;
-        }
-
-        .acciones-producto .boton-detalle {
-            margin-top: 0;
-        }
-
-        .acciones-producto form {
-            margin: 0;
-        }
-
-        .acciones-producto .boton-secundario {
-            width: 100%;
         }
 
         .mensaje-vacio {
@@ -603,9 +625,6 @@
                 padding: 48px 16px;
             }
 
-            .acciones-enlaces {
-                grid-template-columns: 1fr;
-            }
         }
 
         @media (min-width: 561px) and (max-width: 900px) {

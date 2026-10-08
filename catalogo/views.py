@@ -3,9 +3,30 @@ from django.http import HttpResponse, Http404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.urls import reverse
+from django.utils.text import slugify
 import json
 import os
 from django.conf import settings
+
+from .models import ContenidoSitio, Pedido, RegistroAdministrativo
+
+CATEGORIA_VISUAL = {
+    "herramientas-manuales": "🔨",
+    "herramientas-electricas": "⚡",
+    "accesorios-para-herramientas": "⚙",
+    "abrasivos": "◈",
+    "fijaciones": "⊕",
+    "medicion": "📏",
+    "refuerzo-de-taludes": "⛰",
+    "geosinteticos": "▦",
+    "acero-para-hormigon": "▤",
+    "mezclas-asfalticas": "▰",
+    "equipos-para-obra-civil": "⚒",
+    "iluminacion": "✦",
+    "adhesivos-y-sellantes": "◉",
+    "plomeria": "◌",
+    "seguridad-industrial": "⛑",
+}
 
 CONTENIDO_POR_DEFECTO = {
     'marca': 'Ferretería Caro-Kahn',
@@ -43,7 +64,25 @@ CONTENIDO_POR_DEFECTO = {
 def index(request):
     productos = _productos_con_stock_temporal(request)
     destacados = productos[:4]
-    categorias = sorted({producto['categoria'] for producto in productos})
+    conteo_categorias = {}
+    for producto in productos:
+        nombre = producto['categoria'].strip()
+        conteo_categorias[nombre] = conteo_categorias.get(nombre, 0) + 1
+
+    categorias = []
+    for nombre, cantidad in sorted(
+        conteo_categorias.items(),
+        key=lambda categoria: categoria[0].casefold(),
+    ):
+        estilo = slugify(nombre)
+        icono = CATEGORIA_VISUAL.get(estilo, "✳")
+        categorias.append({
+            "nombre": nombre,
+            "cantidad": cantidad,
+            "estilo": estilo if estilo in CATEGORIA_VISUAL else "general",
+            "icono": icono,
+        })
+
     contexto = {
         'productos_destacados': destacados,
         'categorias': categorias,
@@ -69,7 +108,11 @@ def cargar_contenido():
             contenido = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         contenido = {}
-    return {**CONTENIDO_POR_DEFECTO, **contenido}
+    contenido_sitio = {
+        registro.clave: registro.valor
+        for registro in ContenidoSitio.objects.all()
+    }
+    return {**CONTENIDO_POR_DEFECTO, **contenido, **contenido_sitio}
 
 
 def guardar_json(nombre, datos):
@@ -136,7 +179,21 @@ def admin_landing(request):
         if accion == 'guardar_contenido':
             campos = CONTENIDO_POR_DEFECTO.keys()
             contenido.update({campo: request.POST.get(campo, contenido.get(campo, '')) for campo in campos})
+            for campo in campos:
+                ContenidoSitio.objects.update_or_create(
+                    clave=campo,
+                    defaults={
+                        'valor': contenido[campo],
+                        'actualizado_por': request.user,
+                    },
+                )
             guardar_json('contenido.json', contenido)
+            RegistroAdministrativo.registrar(
+                usuario=request.user,
+                accion=RegistroAdministrativo.Accion.ACTUALIZACION,
+                modelo="ContenidoSitio",
+                resumen="Se actualizaron los textos visibles de la página.",
+            )
             messages.success(request, 'Los textos visibles de la Landingpage fueron actualizados.')
         elif accion == 'guardar_producto':
             try:
@@ -160,6 +217,13 @@ def admin_landing(request):
                 stock_temporal.pop(str(producto_id), None)
                 request.session['stock_temporal'] = stock_temporal
                 request.session.modified = True
+                RegistroAdministrativo.registrar(
+                    usuario=request.user,
+                    accion=RegistroAdministrativo.Accion.ACTUALIZACION,
+                    modelo="Producto",
+                    objeto_id=producto_id,
+                    resumen=f'Se actualizó el producto "{producto["nombre"]}".',
+                )
                 messages.success(request, f'El producto "{producto["nombre"]}" fue actualizado.')
             except (StopIteration, TypeError, ValueError):
                 messages.error(request, 'No se pudo actualizar el producto. Revisa los campos.')
@@ -184,6 +248,13 @@ def admin_landing(request):
                     'visible': request.POST.get('visible') == 'on',
                 })
                 guardar_json('productos.json', productos)
+                RegistroAdministrativo.registrar(
+                    usuario=request.user,
+                    accion=RegistroAdministrativo.Accion.CREACION,
+                    modelo="Producto",
+                    objeto_id=nuevo_id,
+                    resumen=f'Se añadió el producto "{nombre}" al catálogo.',
+                )
                 messages.success(request, f'El producto "{nombre}" fue añadido al catálogo.')
             except (TypeError, ValueError):
                 messages.error(request, 'No se pudo añadir el producto. Revisa nombre, precio y stock.')
@@ -200,6 +271,13 @@ def admin_landing(request):
                 stock_temporal.pop(str(producto_id), None)
                 request.session['stock_temporal'] = stock_temporal
                 request.session.modified = True
+                RegistroAdministrativo.registrar(
+                    usuario=request.user,
+                    accion=RegistroAdministrativo.Accion.ELIMINACION,
+                    modelo="Producto",
+                    objeto_id=producto_id,
+                    resumen=f'Se eliminó el producto "{producto["nombre"]}" del catálogo.',
+                )
                 messages.success(request, f'El producto "{producto["nombre"]}" fue eliminado del catálogo.')
             except (StopIteration, TypeError, ValueError):
                 messages.error(request, 'No se pudo eliminar el producto seleccionado.')
@@ -244,37 +322,48 @@ def agregar_al_carrito(request, producto_id):
         return redirect('detalle', producto_id=producto_id)
 
     try:
-        cantidad_solicitada = int(request.POST.get('cantidad', 1))
+        cantidad_solicitada = int(request.POST.get('cantidad', ''))
     except (TypeError, ValueError):
         cantidad_solicitada = 0
 
     if cantidad_solicitada < 1:
-        messages.error(request, 'La cantidad debe ser al menos 1.')
+        messages.error(request, 'Ingresa una cantidad entera de al menos 1.')
         return redirect('detalle', producto_id=producto_id)
 
     carrito = _obtener_carrito(request)
     clave_producto = str(producto_id)
-    item = carrito.get(clave_producto, {
-        'id': producto['id'],
-        'nombre': producto['nombre'],
-        'precio': producto['precio'],
-        'cantidad': 0,
-    })
-    cantidad_total = item['cantidad'] + cantidad_solicitada
+    item_existente = carrito.get(clave_producto, {})
+    try:
+        cantidad_existente = int(item_existente.get('cantidad', 0))
+    except (TypeError, ValueError):
+        messages.error(request, 'No se pudo validar la cantidad que ya está en el carrito.')
+        return redirect('carrito')
+
+    if cantidad_existente < 0:
+        messages.error(request, 'No se pudo validar la cantidad que ya está en el carrito.')
+        return redirect('carrito')
+
+    cantidad_total = cantidad_existente + cantidad_solicitada
     if cantidad_total <= producto['stock']:
-        item['cantidad'] = cantidad_total
-        carrito[clave_producto] = item
+        carrito[clave_producto] = {
+            'id': producto['id'],
+            'nombre': producto['nombre'],
+            'precio': producto['precio'],
+            'cantidad': cantidad_total,
+            'imagen_url': producto.get('imagen_url', ''),
+        }
         _guardar_carrito(request, carrito)
         messages.success(request, f"Se añadieron {cantidad_solicitada} unidad(es) de {producto['nombre']} al carrito.")
+        return redirect('carrito')
     else:
-        disponibles = max(producto['stock'] - item['cantidad'], 0)
+        disponibles = max(producto['stock'] - cantidad_existente, 0)
         messages.warning(request, f'Solo puedes añadir {disponibles} unidad(es) más de este producto.')
     return redirect('detalle', producto_id=producto_id)
 
 
 def carrito(request):
     items = _items_con_subtotales(request)
-    total = sum(item['precio'] * item['cantidad'] for item in items)
+    total = sum(item['subtotal'] for item in items)
     return render(request, 'catalogo/carrito.html', {'items_carrito': items, 'total_carrito': total})
 
 
@@ -406,9 +495,12 @@ def comprar(request, producto_id):
         return redirect('lista')
 
     try:
-        cantidad = max(1, int(request.POST.get('cantidad', 1)))
+        cantidad = int(request.POST.get('cantidad', ''))
     except (TypeError, ValueError):
-        cantidad = 1
+        cantidad = 0
+    if cantidad < 1:
+        messages.error(request, 'Ingresa una cantidad entera de al menos 1.')
+        return redirect('detalle', producto_id=producto_id)
     if cantidad > producto['stock']:
         messages.warning(request, f"Solo hay {producto['stock']} unidad(es) disponibles.")
         return redirect('detalle', producto_id=producto_id)
@@ -422,6 +514,7 @@ def comprar(request, producto_id):
         'imagen_url': producto.get('imagen_url', ''),
     }
     _guardar_carrito(request, carrito)
+    messages.success(request, f"{cantidad} unidad(es) de {producto['nombre']} lista(s) para finalizar la compra.")
     return redirect('checkout')
 
 
@@ -444,7 +537,7 @@ def checkout(request):
         messages.info(request, 'Tu carrito está vacío.')
         return redirect('carrito')
 
-    total = sum(item['precio'] * item['cantidad'] for item in items)
+    total = sum(item['subtotal'] for item in items)
     if request.method == 'POST':
         stock_temporal = request.session.get('stock_temporal', {})
         for item in items:
@@ -458,6 +551,12 @@ def checkout(request):
                 return redirect('carrito')
             stock_temporal[clave_producto] = stock_actual - item['cantidad']
 
+        usuario = request.user if request.user.is_authenticated else None
+        Pedido.registrar_compra(
+            items,
+            nombre_cliente=request.session['usuario_ficticio'],
+            usuario=usuario,
+        )
         request.session['stock_temporal'] = stock_temporal
         request.session['ultimo_pedido'] = items
         request.session.pop('carrito', None)
@@ -465,4 +564,3 @@ def checkout(request):
         return redirect('pedido_confirmado')
 
     return render(request, 'catalogo/checkout.html', {'items_carrito': items, 'total_carrito': total})
-

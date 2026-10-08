@@ -1,13 +1,21 @@
 {% extends 'catalogo/base.html' %}
+{% load static %}
 
 {% block title %}Administración | {{ contenido.marca }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'catalogo/css/admin.css' %}">
+{% endblock %}
 
 {% block content %}
     <section class="admin-shell" aria-labelledby="titulo-administracion">
         <div class="admin-heading">
-            <p class="etiqueta-seccion">Área interna</p>
-            <h1 id="titulo-administracion">Panel de administración</h1>
-            <p class="bajada">Gestiona el stock, la visibilidad, la información de productos y los textos públicos de la Landingpage.</p>
+            <div class="admin-heading-copy">
+                <p class="admin-overline"><span aria-hidden="true"></span> Espacio de trabajo</p>
+                <h1 id="titulo-administracion">Panel de administración</h1>
+                <p class="bajada">Gestiona tu catálogo y mantén actualizada la información que ven tus clientes.</p>
+            </div>
+            <span class="admin-session"><span aria-hidden="true">●</span> Sesión administradora</span>
         </div>
 
         {% if messages %}
@@ -18,13 +26,32 @@
             </div>
         {% endif %}
 
-        <section class="admin-section" aria-labelledby="titulo-contenido">
+        <nav class="admin-menu" aria-label="Secciones de administración">
+            <a href="#productos-admin" class="admin-menu-link admin-menu-primary">
+                <span class="admin-menu-icono" aria-hidden="true">▦</span>
+                <span><strong>Productos</strong><small>Catálogo y stock</small></span>
+                <span class="admin-menu-flecha" aria-hidden="true">↘</span>
+            </a>
+            <a href="#nuevo-producto-admin" class="admin-menu-link">
+                <span class="admin-menu-icono" aria-hidden="true">＋</span>
+                <span><strong>Añadir producto</strong><small>Crear un registro</small></span>
+                <span class="admin-menu-flecha" aria-hidden="true">↘</span>
+            </a>
+            <a href="#contenido-admin" class="admin-menu-link">
+                <span class="admin-menu-icono" aria-hidden="true">✎</span>
+                <span><strong>Contenido del sitio</strong><small>Textos de la tienda</small></span>
+                <span class="admin-menu-flecha" aria-hidden="true">↘</span>
+            </a>
+        </nav>
+
+        <section id="contenido-admin" class="admin-section admin-content-section" aria-labelledby="titulo-contenido">
             <div class="admin-section-heading">
                 <div>
-                    <p class="etiqueta-seccion">Contenido público</p>
+                    <p class="admin-section-kicker">Marca y comunicación</p>
                     <h2 id="titulo-contenido">Textos de la Landingpage</h2>
+                    <p class="admin-section-description">Edita títulos y mensajes que aparecen en la portada y el catálogo.</p>
                 </div>
-                <span class="admin-badge">Se guarda en contenido.json</span>
+                <span class="admin-badge"><span aria-hidden="true">●</span> Contenido del sitio</span>
             </div>
 
             <form method="post" class="admin-form">
@@ -116,18 +143,19 @@
             </form>
         </section>
 
-        <section class="admin-section" aria-labelledby="titulo-productos">
+        <section id="productos-admin" class="admin-section" aria-labelledby="titulo-productos">
             <div class="admin-section-heading">
                 <div>
-                    <p class="etiqueta-seccion">Catálogo</p>
+                    <p class="admin-section-kicker">Inventario</p>
                     <h2 id="titulo-productos">Productos y visibilidad</h2>
+                    <p class="admin-section-description">Mantén al día los precios, el stock y la publicación de cada producto.</p>
                 </div>
-                <span class="admin-badge">{{ productos|length }} productos</span>
+                <span class="admin-badge admin-count">{{ productos|length }} productos</span>
             </div>
 
-            <div class="nuevo-producto-panel">
+            <div id="nuevo-producto-admin" class="nuevo-producto-panel">
                 <div>
-                    <p class="etiqueta-seccion">Nuevo registro</p>
+                    <p class="admin-section-kicker">Nuevo registro</p>
                     <h3>Añadir producto</h3>
                     <p class="texto-admin-suave">Completa los datos básicos para incorporarlo al catálogo.</p>
                 </div>
@@ -216,244 +244,4 @@
         </section>
     </section>
 
-    <style>
-        .admin-shell {
-            margin: 0 auto;
-            max-width: 1180px;
-            padding: 12px 16px 40px;
-        }
-
-        .admin-heading {
-            margin-bottom: 28px;
-        }
-
-        .admin-heading h1 {
-            margin: 0 0 8px;
-        }
-
-        .admin-section {
-            background: var(--blanco);
-            border: 1px solid var(--borde);
-            border-radius: 10px;
-            box-shadow: var(--sombra-suave);
-            margin-top: 24px;
-            padding: 26px;
-        }
-
-        .admin-section-heading {
-            align-items: start;
-            border-bottom: 1px solid var(--borde);
-            display: flex;
-            gap: 16px;
-            justify-content: space-between;
-            margin-bottom: 22px;
-            padding-bottom: 18px;
-        }
-
-        .admin-section-heading h2 {
-            margin: 0;
-        }
-
-        .admin-badge,
-        .producto-id,
-        .estado-visibilidad {
-            background: #e9eef0;
-            border-radius: 999px;
-            color: var(--asfalto-claro);
-            font-size: 0.8rem;
-            font-weight: 800;
-            padding: 6px 10px;
-            white-space: nowrap;
-        }
-
-        .admin-form {
-            display: grid;
-            gap: 18px;
-        }
-
-        .admin-fields {
-            display: grid;
-            gap: 16px;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .admin-fields-wide {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .admin-fields label {
-            color: var(--texto);
-            display: grid;
-            font-size: 0.9rem;
-            font-weight: 700;
-            gap: 7px;
-        }
-
-        .admin-fields input,
-        .admin-fields textarea {
-            border: 1px solid var(--borde);
-            border-radius: 6px;
-            color: var(--texto);
-            min-width: 0;
-            padding: 10px 12px;
-            resize: vertical;
-        }
-
-        .admin-fields input:focus,
-        .admin-fields textarea:focus {
-            border-color: var(--acento-oscuro);
-            outline: 2px solid rgba(245, 169, 0, 0.2);
-        }
-
-        .campo-ancho {
-            grid-column: 1 / -1;
-        }
-
-        .productos-admin {
-            display: grid;
-            gap: 18px;
-        }
-
-        .nuevo-producto-panel {
-            background: #f7f9fa;
-            border: 1px solid var(--borde);
-            border-radius: 8px;
-            margin-bottom: 24px;
-            padding: 20px;
-        }
-
-        .nuevo-producto-panel h3 {
-            margin: 0 0 4px;
-        }
-
-        .texto-admin-suave {
-            color: var(--texto-suave);
-            margin: 0 0 18px;
-        }
-
-        .producto-admin {
-            border: 1px solid var(--borde);
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .producto-admin.producto-oculto {
-            background: #faf6f2;
-            border-color: #d8c2ae;
-        }
-
-        .producto-admin-header {
-            align-items: center;
-            display: flex;
-            gap: 14px;
-            justify-content: space-between;
-            margin-bottom: 18px;
-        }
-
-        .producto-admin-header h3 {
-            margin: 8px 0 0;
-        }
-
-        .estado-visibilidad {
-            background: #e6f5ed;
-            color: var(--exito);
-        }
-
-        .producto-oculto .estado-visibilidad {
-            background: #fce8e6;
-            color: var(--peligro);
-        }
-
-        .producto-admin-actions {
-            align-items: center;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: space-between;
-        }
-
-        .acciones-admin-producto {
-            align-items: center;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .boton-eliminar {
-            background: #b42318;
-            border: 0;
-            border-radius: 6px;
-            color: var(--blanco);
-            cursor: pointer;
-            font: inherit;
-            font-weight: 800;
-            padding: 0.72rem 1.1rem;
-        }
-
-        .boton-eliminar:hover,
-        .boton-eliminar:focus-visible {
-            background: #8f1c14;
-        }
-
-        .check-visible {
-            align-items: center;
-            color: var(--texto-suave);
-            display: flex;
-            gap: 8px;
-            font-weight: 700;
-        }
-
-        .check-visible input {
-            accent-color: var(--acento-oscuro);
-            height: 18px;
-            width: 18px;
-        }
-
-        .mensaje-admin {
-            background: #e6f5ed;
-            border-left: 4px solid var(--exito);
-            color: var(--exito);
-            margin: 0 0 18px;
-            padding: 12px;
-        }
-
-        .mensaje-admin.error {
-            background: #fce8e6;
-            border-color: var(--peligro);
-            color: var(--peligro);
-        }
-
-        @media (max-width: 700px) {
-            .admin-section {
-                padding: 18px;
-            }
-
-            .admin-section-heading,
-            .producto-admin-header {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .admin-fields,
-            .admin-fields-wide {
-                grid-template-columns: 1fr;
-            }
-
-            .campo-ancho {
-                grid-column: auto;
-            }
-
-            .producto-admin-actions .boton-detalle {
-                width: 100%;
-            }
-
-            .acciones-admin-producto {
-                width: 100%;
-            }
-
-            .acciones-admin-producto .boton-eliminar {
-                width: 100%;
-            }
-        }
-    </style>
 {% endblock %}
